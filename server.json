@@ -1,0 +1,79 @@
+{
+  "$schema": "https://registry.modelcontextprotocol.io/schemas/server-v1.json",
+  "name": "io.github.agent-polis/safe-agent",
+  "displayName": "Safe Agent",
+  "description": "Delegate coding tasks to a trusted AI agent with built-in impact preview",
+  "version": "0.1.0",
+  "license": "MIT",
+  "author": {
+    "name": "Agent Polis Contributors"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agent-polis/safe-agent"
+  },
+  "homepage": "https://github.com/agent-polis/safe-agent",
+  "bugs": "https://github.com/agent-polis/safe-agent/issues",
+  
+  "runtime": "python",
+  "transport": "stdio",
+  
+  "package": {
+    "registry": "pypi",
+    "name": "safe-agent"
+  },
+  
+  "installation": {
+    "command": "pip install safe-agent",
+    "postInstall": "Ensure ANTHROPIC_API_KEY environment variable is set"
+  },
+  
+  "execution": {
+    "command": "safe-agent-mcp"
+  },
+  
+  "tools": [
+    {
+      "name": "run_coding_task",
+      "description": "Execute a coding task with safety checks",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "preview_coding_task",
+      "description": "Preview changes without executing",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "get_agent_status",
+      "description": "Get agent status and capabilities",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ],
+  
+  "configuration": {
+    "required": {
+      "ANTHROPIC_API_KEY": {
+        "description": "API key for Anthropic Claude",
+        "type": "secret"
+      }
+    }
+  },
+  
+  "categories": ["developer-tools", "code-generation", "safety"],
+  "tags": ["coding", "safety", "impact-preview", "file-management", "autonomous-agents"]
+}

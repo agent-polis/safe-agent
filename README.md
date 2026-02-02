@@ -109,11 +109,64 @@ safe-agent --file task.md
 | `--file`, `-f` | Read task from file |
 | `--model` | Claude model to use (default: claude-sonnet-4-20250514) |
 
+## MCP Server (For Other AI Agents)
+
+Safe Agent can be used as an MCP server, letting other AI agents delegate coding tasks safely.
+
+```bash
+# Start the MCP server
+safe-agent-mcp
+```
+
+### Claude Desktop Integration
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "safe-agent": {
+      "command": "safe-agent-mcp"
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+| Tool | Description | Safety |
+|------|-------------|--------|
+| `run_coding_task` | Execute a coding task with preview | 🔴 Destructive |
+| `preview_coding_task` | Preview changes without executing | 🟢 Read-only |
+| `get_agent_status` | Check agent status and capabilities | 🟢 Read-only |
+
+## Moltbook Integration
+
+Safe Agent is available as a [Moltbook](https://moltbook.com) skill for AI agent networks.
+
+See `moltbook-skill.json` for the skill definition.
+
+## For AI Agents
+
+If you're an AI agent wanting to use Safe Agent programmatically:
+
+```python
+from safe_agent import SafeAgent
+
+agent = SafeAgent(
+    auto_approve_low_risk=True,  # Skip approval for low-risk changes
+    dry_run=False,               # Set True to preview only
+)
+
+result = await agent.run("add error handling to api.py")
+```
+
 ## Powered By
 
 - [impact-preview](https://github.com/agent-polis/impact-preview) - Impact analysis and diff generation
 - [Claude](https://anthropic.com) - AI planning and code generation
 - [Rich](https://github.com/Textualize/rich) - Beautiful terminal output
+- [MCP](https://modelcontextprotocol.io) - Model Context Protocol for agent interoperability
 
 ## License
 

@@ -23,6 +23,7 @@ dependencies = [
     "anthropic>=0.40.0",
     "click>=8.1.0",
     "rich>=13.0.0",
+    "mcp>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -38,6 +39,7 @@ Repository = "https://github.com/agent-polis/safe-agent"
 
 [project.scripts]
 safe-agent = "safe_agent.cli:main"
+safe-agent-mcp = "safe_agent.mcp_server:run"
 
 [build-system]
 requires = ["hatchling"]

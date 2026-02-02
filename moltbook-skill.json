@@ -1,0 +1,72 @@
+{
+  "$schema": "https://moltbook.com/schemas/skill-v1.json",
+  "name": "safe-agent",
+  "display_name": "Safe Agent",
+  "version": "0.1.0",
+  "description": "Delegate coding tasks to a trusted AI agent with built-in impact preview. See exactly what will change before any file is modified.",
+  "author": "agent-polis",
+  "homepage": "https://github.com/agent-polis/safe-agent",
+  "license": "MIT",
+  
+  "capabilities": [
+    "code_generation",
+    "file_modification",
+    "impact_preview",
+    "risk_assessment"
+  ],
+  
+  "tags": ["coding", "safety", "developer-tools", "automation", "file-management"],
+  
+  "installation": {
+    "method": "pip",
+    "package": "safe-agent",
+    "command": "pip install safe-agent"
+  },
+  
+  "configuration": {
+    "required_env": ["ANTHROPIC_API_KEY"],
+    "optional_env": []
+  },
+  
+  "mcp_server": {
+    "command": "safe-agent-mcp",
+    "transport": "stdio"
+  },
+  
+  "tools": [
+    {
+      "name": "run_coding_task",
+      "description": "Execute a coding task with safety checks and impact preview",
+      "destructive": true,
+      "requires_approval": true
+    },
+    {
+      "name": "preview_coding_task",
+      "description": "Preview what changes a task would make without executing",
+      "destructive": false,
+      "requires_approval": false
+    },
+    {
+      "name": "get_agent_status",
+      "description": "Check safe-agent status and capabilities",
+      "destructive": false,
+      "requires_approval": false
+    }
+  ],
+  
+  "prompts": {
+    "system_addition": "You have access to Safe Agent, a coding assistant with built-in safety checks. Before making file changes, always use preview_coding_task to see what will change. Only use run_coding_task when you're confident the changes are correct.",
+    "usage_hint": "When delegating coding work, prefer preview_coding_task first to understand the scope, then run_coding_task with dry_run=true, then finally run_coding_task to execute."
+  },
+  
+  "trust_level": "verified",
+  "safety_rating": "high",
+  
+  "related_skills": [
+    {
+      "name": "impact-preview",
+      "relationship": "dependency",
+      "url": "https://github.com/agent-polis/impact-preview"
+    }
+  ]
+}
