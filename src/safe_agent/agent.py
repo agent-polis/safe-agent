@@ -13,10 +13,10 @@ from rich.prompt import Confirm
 from rich.syntax import Syntax
 from rich.table import Table
 
-# Import impact-preview components
-from impact_preview.actions.analyzer import ImpactAnalyzer
-from impact_preview.actions.diff import format_diff_plain
-from impact_preview.actions.models import ActionRequest, ActionType, RiskLevel
+# Import impact-preview components (package is impact-preview, module is agent_polis)
+from agent_polis.actions.analyzer import ImpactAnalyzer
+from agent_polis.actions.diff import format_diff_plain
+from agent_polis.actions.models import ActionRequest, ActionType, RiskLevel
 
 console = Console()
 

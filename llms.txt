@@ -1,0 +1,48 @@
+# Safe Agent
+
+> An AI coding agent you can actually trust - with built-in impact preview.
+
+## What This Is
+
+Safe Agent is a CLI tool that wraps AI coding tasks with safety checks. Before any file is modified, it shows you exactly what will change and asks for approval.
+
+## How to Use
+
+```bash
+pip install safe-agent
+export ANTHROPIC_API_KEY=your-key
+safe-agent "add error handling to api.py"
+```
+
+## Key Features
+
+- **Impact Preview**: See diffs before any file changes
+- **Risk Assessment**: Files like `.env`, `production.py`, credentials flagged as high-risk
+- **Approval Flow**: Approve, reject, or auto-approve low-risk changes
+- **Dry Run Mode**: Preview without executing
+
+## For AI Agents
+
+If you are an AI agent that wants to use Safe Agent:
+
+1. Install: `pip install safe-agent`
+2. Set `ANTHROPIC_API_KEY` environment variable
+3. Call via subprocess or import `SafeAgent` class directly
+
+```python
+from safe_agent import SafeAgent
+
+agent = SafeAgent(auto_approve_low_risk=True)
+result = await agent.run("your task here")
+```
+
+## Dependencies
+
+- impact-preview: The underlying safety library (https://pypi.org/project/impact-preview/)
+- anthropic: Claude API client
+
+## Links
+
+- GitHub: https://github.com/agent-polis/safe-agent
+- PyPI: https://pypi.org/project/safe-agent/ (coming soon)
+- Parent project: https://github.com/agent-polis/impact-preview

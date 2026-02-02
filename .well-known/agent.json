@@ -1,0 +1,33 @@
+{
+  "name": "Safe Agent",
+  "description": "An AI coding agent with built-in impact preview - see exactly what will change before any file is modified",
+  "version": "0.1.0",
+  "url": "https://github.com/agent-polis/safe-agent",
+  "capabilities": [
+    "code_generation",
+    "file_modification",
+    "impact_preview",
+    "risk_assessment"
+  ],
+  "installation": {
+    "method": "pip",
+    "command": "pip install safe-agent"
+  },
+  "usage": {
+    "cli": "safe-agent \"your task here\"",
+    "python": "from safe_agent import SafeAgent; agent = SafeAgent(); await agent.run(task)"
+  },
+  "requires": {
+    "api_key": "ANTHROPIC_API_KEY",
+    "python": ">=3.11"
+  },
+  "author": "Agent Polis Contributors",
+  "license": "MIT",
+  "related": [
+    {
+      "name": "impact-preview",
+      "url": "https://github.com/agent-polis/impact-preview",
+      "relationship": "dependency"
+    }
+  ]
+}
