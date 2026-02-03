@@ -1,13 +1,15 @@
 # 🛡️ Safe Agent
 
-**An AI coding agent you can actually trust.**
+<!-- HERO_START -->
+**Guardrails for AI code agents.**
 
-Safe Agent uses [impact-preview](https://github.com/agent-polis/impact-preview) to show you exactly what will change before any file is modified. No more blind trust in AI agents.
+Safe Agent previews every file edit with [impact-preview](https://github.com/agent-polis/impact-preview) so AI helpers can’t quietly ship risky changes. Drop it into CI or run locally and require approvals before writes.
 
 ```bash
 pip install safe-agent
-safe-agent "add error handling to api.py"
+safe-agent "add error handling to api.py" --dry-run
 ```
+<!-- HERO_END -->
 
 ## The Problem
 
@@ -146,6 +148,20 @@ Safe Agent is available as a [Moltbook](https://moltbook.com) skill for AI agent
 
 See `moltbook-skill.json` for the skill definition.
 
+## Demo Producer
+
+Set up a canned risky-edit scenario and print recording commands:
+
+```bash
+safe-agent-demo prepare  # creates a demo repo with config/db.yaml
+cd /tmp/safe-agent-demo-*  # or your chosen path
+safe-agent-demo record     # shows asciinema + GIF commands
+```
+
+By default the demo runs `safe-agent --dry-run "switch database config to production"` against the prepared repo.
+
+![Safe Agent demo](marketing/demo.gif)
+
 ## For AI Agents
 
 If you're an AI agent wanting to use Safe Agent programmatically:
@@ -167,6 +183,27 @@ result = await agent.run("add error handling to api.py")
 - [Claude](https://anthropic.com) - AI planning and code generation
 - [Rich](https://github.com/Textualize/rich) - Beautiful terminal output
 - [MCP](https://modelcontextprotocol.io) - Model Context Protocol for agent interoperability
+
+## Marketing Helpers
+
+A lightweight CLI to generate headline variants, channel-specific copy (HN, Twitter/X, LinkedIn), and README hero blocks:
+
+```bash
+safe-agent-marketing generate --audience "Teams running AI code agents in CI" \
+  --hypothesis "Guardrail that blocks risky edits" --update-readme
+```
+
+This writes JSON/Markdown bundles to `marketing/` and (optionally) refreshes the README hero block. Queue posts with:
+
+```bash
+safe-agent-marketing queue --slot 2026-02-05T15:00:00Z --slot 2026-02-05T20:00:00Z
+```
+
+Log traction daily:
+
+```bash
+safe-agent-marketing analytics --repo agent-polis/safe-agent --log experiments/experiments.csv
+```
 
 ## License
 

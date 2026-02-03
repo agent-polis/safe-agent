@@ -1,7 +1,11 @@
 [project]
 name = "safe-agent"
-version = "0.1.0"
+version = "0.2.0"
 description = "An AI coding agent you can actually trust - with built-in impact preview"
+
+# MCP Registry name (required for publishing)
+[tool.mcp]
+name = "io.github.agent-polis/safe-agent"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
@@ -40,6 +44,8 @@ Repository = "https://github.com/agent-polis/safe-agent"
 [project.scripts]
 safe-agent = "safe_agent.cli:main"
 safe-agent-mcp = "safe_agent.mcp_server:run"
+safe-agent-marketing = "safe_agent.marketing_cli:main"
+safe-agent-demo = "safe_agent.demo_cli:main"
 
 [build-system]
 requires = ["hatchling"]
