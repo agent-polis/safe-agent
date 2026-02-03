@@ -11,6 +11,11 @@ safe-agent "add error handling to api.py" --dry-run
 ```
 <!-- HERO_END -->
 
+## Project Map
+
+- **impact-preview (Agent Polis)**: the guardrail layer that previews and scores risky actions.
+- **safe-agent-cli (this repo)**: a reference coding agent that uses impact-preview for approvals.
+
 ## The Problem
 
 AI coding agents are powerful but dangerous:
