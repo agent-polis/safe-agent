@@ -1,0 +1,42 @@
+name: Safe Agent Preview (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Task for Safe Agent to dry-run"
+        required: true
+        default: "scan repository for risky configuration changes; DO NOT edit files, only preview"
+
+concurrency:
+  group: safe-agent-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Safe Agent
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Run Safe Agent (dry-run)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          safe-agent --dry-run "${{ github.event.inputs.task }}" | tee safe-agent.log
+
+      - name: Upload log
+        uses: actions/upload-artifact@v4
+        with:
+          name: safe-agent-preview-log
+          path: safe-agent.log

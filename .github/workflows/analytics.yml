@@ -1,0 +1,42 @@
+name: Safe Agent Analytics (scheduled)
+
+on:
+  schedule:
+    - cron: "0 14 * * 1-5"  # 09:00 US Eastern Mon-Fri
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: safe-agent-analytics
+  cancel-in-progress: true
+
+jobs:
+  analytics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Safe Agent
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Run analytics
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          safe-agent-marketing analytics --repo agent-polis/safe-agent --log experiments/experiments.csv
+
+      - name: Upload analytics log
+        uses: actions/upload-artifact@v4
+        with:
+          name: experiments-log-${{ github.run_id }}
+          path: experiments/experiments.csv
