@@ -6,7 +6,7 @@
 Safe Agent previews every file edit with [impact-preview](https://github.com/agent-polis/impact-preview) so AI helpers can’t quietly ship risky changes. Drop it into CI or run locally and require approvals before writes.
 
 ```bash
-pip install safe-agent
+pip install safe-agent-cli
 safe-agent "add error handling to api.py" --dry-run
 ```
 <!-- HERO_END -->
@@ -59,7 +59,7 @@ Apply this change? [y/N]:
 ## Installation
 
 ```bash
-pip install safe-agent
+pip install safe-agent-cli
 ```
 
 Set your Anthropic API key:

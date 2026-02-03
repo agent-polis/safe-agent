@@ -1,5 +1,5 @@
 [project]
-name = "safe-agent"
+name = "safe-agent-cli"
 version = "0.2.0"
 description = "An AI coding agent you can actually trust - with built-in impact preview"
 
