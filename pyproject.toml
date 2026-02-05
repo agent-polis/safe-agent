@@ -2,6 +2,30 @@
 name = "safe-agent-cli"
 version = "0.2.0"
 description = "An AI coding agent you can actually trust - with built-in impact preview"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Agent Polis Contributors"}
+]
+keywords = ["ai", "agent", "coding", "safety", "preview", "autonomous"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "impact-preview>=0.2.1",
+    "anthropic>=0.40.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "mcp>=1.0.0",
+    "httpx>=0.27.0",
+]
 
 # MCP Registry name (required for publishing)
 [tool.mcp]
@@ -28,6 +52,7 @@ dependencies = [
     "click>=8.1.0",
     "rich>=13.0.0",
     "mcp>=1.0.0",
+    "httpx>=0.27.0",
 ]
 
 [project.optional-dependencies]
