@@ -17,7 +17,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
-import anthropic
 import httpx
 
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
@@ -141,6 +140,9 @@ def generate_marketing_assets(
 
     We keep parsing simple and tolerant so the CLI can run unattended.
     """
+
+    # Import lazily so `safe-agent-marketing analytics` can run without Anthropic installed.
+    import anthropic
 
     client = anthropic.Anthropic()
     system = _generation_prompt(product, audience, hypothesis, base_url)
