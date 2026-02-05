@@ -34,11 +34,15 @@ class SafeAgent:
         auto_approve_low_risk: bool = False,
         dry_run: bool = False,
         working_directory: str | None = None,
+        non_interactive: bool = False,
+        fail_on_risk: RiskLevel | None = None,
     ):
         self.model = model
         self.auto_approve_low_risk = auto_approve_low_risk
         self.dry_run = dry_run
         self.working_directory = working_directory or os.getcwd()
+        self.non_interactive = non_interactive
+        self.fail_on_risk = fail_on_risk
         
         self.client = anthropic.Anthropic()
         self.analyzer = ImpactAnalyzer(working_directory=self.working_directory)
@@ -46,6 +50,57 @@ class SafeAgent:
         # Track changes for summary
         self.changes_made: list[dict] = []
         self.changes_rejected: list[dict] = []
+        self.max_risk_level_seen: RiskLevel | None = None
+        self.risk_policy_failed = False
+
+    def _resolve_path_safe(self, path: str) -> Path | None:
+        """Resolve a path safely under the working directory.
+
+        Returns None if the path is absolute, attempts traversal, or resolves
+        outside the working directory (including via symlinks).
+        """
+
+        raw = (path or "").strip()
+        if not raw or raw in {".", "./"}:
+            return None
+        if raw.startswith("~"):
+            return None
+        if "\x00" in raw:
+            return None
+        # Reject likely Windows absolute paths (drive letter or UNC).
+        if len(raw) >= 2 and raw[1] == ":" and raw[0].isalpha():
+            return None
+        if raw.startswith("\\\\"):
+            return None
+
+        candidate = Path(raw)
+        if candidate.is_absolute():
+            return None
+
+        base = Path(self.working_directory).resolve()
+        resolved = (base / candidate).resolve()
+        try:
+            resolved.relative_to(base)
+        except ValueError:
+            return None
+        return resolved
+
+    @staticmethod
+    def _risk_severity(level: RiskLevel) -> int:
+        order = {
+            RiskLevel.LOW: 0,
+            RiskLevel.MEDIUM: 1,
+            RiskLevel.HIGH: 2,
+            RiskLevel.CRITICAL: 3,
+        }
+        return order.get(level, 99)
+
+    def _note_risk(self, level: RiskLevel) -> None:
+        if self.max_risk_level_seen is None:
+            self.max_risk_level_seen = level
+            return
+        if self._risk_severity(level) > self._risk_severity(self.max_risk_level_seen):
+            self.max_risk_level_seen = level
     
     async def run(self, task: str) -> dict[str, Any]:
         """
@@ -58,7 +113,13 @@ class SafeAgent:
         
         if not plan.get("changes"):
             console.print("[yellow]No file changes needed for this task.[/yellow]")
-            return {"success": True, "changes": []}
+            return {
+                "success": True,
+                "changes_made": [],
+                "changes_rejected": [],
+                "max_risk_level_seen": None,
+                "risk_policy_failed": False,
+            }
         
         # Show plan
         self._show_plan(plan)
@@ -79,10 +140,13 @@ class SafeAgent:
         # Summary
         self._show_summary()
         
+        success = not self.risk_policy_failed
         return {
-            "success": True,
+            "success": success,
             "changes_made": self.changes_made,
             "changes_rejected": self.changes_rejected,
+            "max_risk_level_seen": self.max_risk_level_seen.value if self.max_risk_level_seen else None,
+            "risk_policy_failed": self.risk_policy_failed,
         }
     
     async def _plan_changes(self, task: str) -> dict[str, Any]:
@@ -188,7 +252,15 @@ Rules:
         
         action = change["action"]
         path = change["path"]
-        full_path = os.path.join(self.working_directory, path)
+        resolved_path = self._resolve_path_safe(path)
+        if resolved_path is None:
+            console.print(f"[red]Unsafe path rejected (outside working directory): {path}[/red]")
+            self._note_risk(RiskLevel.CRITICAL)
+            if self.fail_on_risk and self._risk_severity(RiskLevel.CRITICAL) >= self._risk_severity(
+                self.fail_on_risk
+            ):
+                self.risk_policy_failed = True
+            return False
         
         # Map to ActionType
         if action == "create":
@@ -204,13 +276,21 @@ Rules:
         # Create request
         request = ActionRequest(
             action_type=action_type,
-            target=full_path,
+            target=str(resolved_path),
             description=change.get("description", f"{action} {path}"),
             payload={"content": change.get("content", "")},
         )
         
         # Analyze with impact-preview
         preview = await self.analyzer.analyze(request)
+        self._note_risk(preview.risk_level)
+
+        policy_triggered = bool(
+            self.fail_on_risk
+            and self._risk_severity(preview.risk_level) >= self._risk_severity(self.fail_on_risk)
+        )
+        if policy_triggered:
+            self.risk_policy_failed = True
         
         # Display preview
         risk_emoji = {
@@ -250,6 +330,20 @@ Rules:
                 console.print(f"[dim]... ({len(change['content'])} total characters)[/dim]")
         
         console.print()
+
+        if policy_triggered and self.fail_on_risk:
+            console.print(
+                f"[red]✗ Policy: --fail-on-risk={self.fail_on_risk.value} "
+                f"(saw {preview.risk_level.value})[/red]"
+            )
+            return False
+
+        if self.non_interactive:
+            if preview.risk_level in {RiskLevel.LOW, RiskLevel.MEDIUM}:
+                console.print("[green]✓ Auto-approved (non-interactive)[/green]")
+                return True
+            console.print("[yellow]⊘ Auto-rejected (non-interactive)[/yellow]")
+            return False
         
         # Auto-approve low risk if enabled
         if self.auto_approve_low_risk and preview.risk_level == RiskLevel.LOW:
@@ -270,19 +364,23 @@ Rules:
     def _execute_change(self, change: dict) -> None:
         """Execute an approved change."""
         action = change["action"]
-        path = os.path.join(self.working_directory, change["path"])
+        resolved_path = self._resolve_path_safe(change["path"])
+        if resolved_path is None:
+            console.print(
+                f"[red]✗ Refusing to execute unsafe path (outside working directory): {change['path']}[/red]"
+            )
+            return
         
         try:
             if action == "create" or action == "modify":
                 # Ensure directory exists
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                with open(path, "w") as f:
-                    f.write(change.get("content", ""))
+                resolved_path.parent.mkdir(parents=True, exist_ok=True)
+                resolved_path.write_text(change.get("content", ""), encoding="utf-8")
                 console.print(f"[green]✓ {action.title()}d: {change['path']}[/green]")
                 
             elif action == "delete":
-                if os.path.exists(path):
-                    os.remove(path)
+                if resolved_path.exists():
+                    resolved_path.unlink()
                     console.print(f"[green]✓ Deleted: {change['path']}[/green]")
                 else:
                     console.print(f"[yellow]File not found: {change['path']}[/yellow]")
@@ -307,3 +405,10 @@ Rules:
         
         if not self.changes_made and not self.changes_rejected:
             console.print("[dim]No changes to report[/dim]")
+
+        if self.max_risk_level_seen:
+            console.print(f"[dim]Max risk seen: {self.max_risk_level_seen.value.upper()}[/dim]")
+        if self.risk_policy_failed and self.fail_on_risk:
+            console.print(
+                f"[bold red]✗ Risk policy failed (>= {self.fail_on_risk.value.upper()})[/bold red]"
+            )

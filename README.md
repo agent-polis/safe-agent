@@ -87,6 +87,15 @@ safe-agent "refactor auth module" --dry-run
 safe-agent "add docstrings" --auto-approve-low
 ```
 
+### CI / Non-interactive mode
+
+Use `--non-interactive` to avoid prompts (auto-approves LOW/MEDIUM, rejects HIGH/CRITICAL). Combine with
+`--fail-on-risk` to fail the process if risky changes are proposed:
+
+```bash
+safe-agent "scan repository for risky config changes" --dry-run --non-interactive --fail-on-risk high
+```
+
 ### Interactive Mode
 
 ```bash
@@ -112,6 +121,8 @@ safe-agent --file task.md
 |------|-------------|
 | `--dry-run` | Preview changes without executing |
 | `--auto-approve-low` | Auto-approve low-risk changes |
+| `--non-interactive` | Run without prompts (CI-friendly) |
+| `--fail-on-risk` | Exit non-zero if any change meets/exceeds risk level |
 | `--interactive`, `-i` | Interactive mode |
 | `--file`, `-f` | Read task from file |
 | `--model` | Claude model to use (default: claude-sonnet-4-20250514) |

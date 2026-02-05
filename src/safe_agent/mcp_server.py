@@ -56,6 +56,16 @@ async def list_tools() -> list[Tool]:
                         "description": "Preview changes without executing them",
                         "default": False,
                     },
+                    "non_interactive": {
+                        "type": "boolean",
+                        "description": "Run without prompts (recommended for tool use / CI)",
+                        "default": True,
+                    },
+                    "fail_on_risk": {
+                        "type": "string",
+                        "description": "Fail the run if any change meets/exceeds this risk level",
+                        "enum": ["low", "medium", "high", "critical"],
+                    },
                 },
                 "required": ["task"],
             },
@@ -136,6 +146,8 @@ async def _run_coding_task(args: dict[str, Any]) -> list[TextContent]:
     working_dir = args.get("working_directory", os.getcwd())
     auto_approve = args.get("auto_approve_low_risk", False)
     dry_run = args.get("dry_run", False)
+    non_interactive = args.get("non_interactive", True)
+    fail_on_risk = args.get("fail_on_risk")
     
     if not task:
         return [TextContent(type="text", text="Error: No task provided")]
@@ -148,10 +160,18 @@ async def _run_coding_task(args: dict[str, Any]) -> list[TextContent]:
         )]
     
     try:
+        fail_on_risk_level = None
+        if fail_on_risk:
+            from agent_polis.actions.models import RiskLevel
+
+            fail_on_risk_level = RiskLevel(str(fail_on_risk).lower())
+
         agent = SafeAgent(
             working_directory=working_dir,
             auto_approve_low_risk=auto_approve,
             dry_run=dry_run,
+            non_interactive=non_interactive,
+            fail_on_risk=fail_on_risk_level,
         )
         
         result = await agent.run(task)
@@ -167,6 +187,8 @@ async def _run_coding_task(args: dict[str, Any]) -> list[TextContent]:
                 {"action": c["action"], "path": c["path"]}
                 for c in result.get("changes_rejected", [])
             ],
+            "max_risk_level_seen": result.get("max_risk_level_seen"),
+            "risk_policy_failed": result.get("risk_policy_failed", False),
         }
         
         summary = []

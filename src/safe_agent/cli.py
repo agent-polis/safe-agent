@@ -14,7 +14,6 @@ import sys
 import click
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Confirm
 
 from safe_agent.agent import SafeAgent
 
@@ -27,6 +26,13 @@ console = Console()
 @click.option("--interactive", "-i", is_flag=True, help="Interactive mode")
 @click.option("--auto-approve-low", is_flag=True, help="Auto-approve low-risk changes")
 @click.option("--dry-run", is_flag=True, help="Preview only, don't execute")
+@click.option("--non-interactive", is_flag=True, help="Run without prompts (CI-friendly)")
+@click.option(
+    "--fail-on-risk",
+    type=click.Choice(["low", "medium", "high", "critical"], case_sensitive=False),
+    default=None,
+    help="Exit non-zero if any change meets/exceeds this risk level",
+)
 @click.option("--model", default="claude-sonnet-4-20250514", help="Claude model to use")
 def main(
     task: str | None,
@@ -34,6 +40,8 @@ def main(
     interactive: bool,
     auto_approve_low: bool,
     dry_run: bool,
+    non_interactive: bool,
+    fail_on_risk: str | None,
     model: str,
 ):
     """
@@ -88,16 +96,29 @@ def main(
     
     # Show task
     console.print(Panel(task, title="📋 Task", border_style="blue"))
+
+    inferred_non_interactive = non_interactive or bool(os.environ.get("CI")) or (
+        not sys.stdin.isatty() or not sys.stdout.isatty()
+    )
+    fail_on_risk_level = None
+    if fail_on_risk:
+        from agent_polis.actions.models import RiskLevel
+
+        fail_on_risk_level = RiskLevel(fail_on_risk.lower())
     
     # Create agent and run
     agent = SafeAgent(
         model=model,
         auto_approve_low_risk=auto_approve_low,
         dry_run=dry_run,
+        non_interactive=inferred_non_interactive,
+        fail_on_risk=fail_on_risk_level,
     )
     
     try:
-        asyncio.run(agent.run(task))
+        result = asyncio.run(agent.run(task))
+        if not result.get("success", False):
+            sys.exit(2)
     except KeyboardInterrupt:
         console.print("\n[yellow]Interrupted[/yellow]")
         sys.exit(1)
