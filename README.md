@@ -15,6 +15,9 @@ safe-agent "add error handling to api.py" --dry-run
 
 - **impact-preview (Agent Polis)**: the guardrail layer that previews and scores risky actions.
 - **safe-agent-cli (this repo)**: a reference coding agent that uses impact-preview for approvals.
+- **Roadmap**: staged execution plan in [`ROADMAP.md`](ROADMAP.md).
+- **Compatibility Matrix**: version contract in [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md).
+- **Monday Packet**: current assignment bundle in [`docs/monday-assignment-packet.md`](docs/monday-assignment-packet.md).
 
 ## The Problem
 
