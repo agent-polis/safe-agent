@@ -11,6 +11,12 @@ safe-agent "add error handling to api.py" --dry-run
 ```
 <!-- HERO_END -->
 
+### ✨ New in v0.3.0
+
+- 🏥 **Insurance Integration** - Audit export for AI liability insurance carriers
+- 🇪🇺 **EU AI Act Ready** - Compliance mode for August 2026 enforcement
+- 📊 **Incident Database** - Community-sourced AI agent failure documentation
+
 ## Project Map
 
 - **impact-preview (Agent Polis)**: the guardrail layer that previews and scores risky actions.
@@ -118,6 +124,56 @@ safe-agent --file task.md
 3. **Approve** - You see the diff and risk level before anything executes
 4. **Execute** - Only approved changes are applied
 
+## Enterprise & Compliance Features
+
+Safe Agent now includes features for insurance partnerships, regulatory compliance, and enterprise deployments.
+
+### Audit Export for Insurance
+
+Export complete audit trails for insurance underwriting and claims:
+
+```bash
+safe-agent "update production config" --audit-export audit.json
+```
+
+The audit export includes:
+- Complete task history with timestamps
+- Risk assessments for all operations
+- Approval/rejection records (human oversight)
+- Change execution status
+- Compliance flags for regulatory requirements
+
+Perfect for working with AI liability insurance carriers like [AIUC](https://www.aiunderwritingconsortium.com/), [Armilla AI](https://www.armilla.ai/), and [Beazley](https://www.beazley.com/).
+
+See [docs/insurance-integration.md](docs/insurance-integration.md) for details on insurance partnerships and premium rate factors.
+
+### EU AI Act Compliance Mode
+
+Enable strict compliance mode for EU AI Act requirements:
+
+```bash
+safe-agent "modify user data" --compliance-mode --audit-export audit.json
+```
+
+Compliance mode:
+- Disables all auto-approve features (Article 14: Human Oversight)
+- Requires explicit approval for every operation
+- Records all compliance flags in audit exports
+- Supports Article 12 (Record-Keeping) requirements
+
+Ready for the **August 2, 2026 enforcement deadline**.
+
+See [docs/eu-ai-act-compliance.md](docs/eu-ai-act-compliance.md) for complete compliance guide and requirements mapping.
+
+### Incident Documentation
+
+We maintain a comprehensive database of AI agent incidents to raise awareness and demonstrate prevention mechanisms:
+
+- [Replit SaaStr Database Deletion](docs/incident-reports/2025-07-replit-saastr.md) - Production database deleted during demo
+- [Cursor YOLO Mode Bypass](docs/incident-reports/2025-07-cursor-yolo-mode.md) - Security controls circumvented
+
+[Submit an incident report](.github/ISSUE_TEMPLATE/incident-report.md) to help the community.
+
 ## Options
 
 | Flag | Description |
@@ -129,6 +185,8 @@ safe-agent --file task.md
 | `--interactive`, `-i` | Interactive mode |
 | `--file`, `-f` | Read task from file |
 | `--model` | Claude model to use (default: claude-sonnet-4-20250514) |
+| `--audit-export` | Export audit trail to JSON file (insurance/compliance) |
+| `--compliance-mode` | Enable strict compliance mode (disables auto-approve) |
 
 ## MCP Server (For Other AI Agents)
 
@@ -189,11 +247,24 @@ If you're an AI agent wanting to use Safe Agent programmatically:
 from safe_agent import SafeAgent
 
 agent = SafeAgent(
-    auto_approve_low_risk=True,  # Skip approval for low-risk changes
-    dry_run=False,               # Set True to preview only
+    auto_approve_low_risk=True,      # Skip approval for low-risk changes
+    dry_run=False,                   # Set True to preview only
+    audit_export_path="audit.json",  # Export audit trail for compliance
+    compliance_mode=False,           # Enable for EU AI Act compliance
 )
 
 result = await agent.run("add error handling to api.py")
+```
+
+For insurance and compliance use cases:
+
+```python
+# EU AI Act compliant configuration
+agent = SafeAgent(
+    compliance_mode=True,              # Strict compliance mode
+    audit_export_path="audit.json",    # Required for Article 12
+    non_interactive=False,             # Human oversight required
+)
 ```
 
 ## Powered By
