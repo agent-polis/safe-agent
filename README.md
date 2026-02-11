@@ -203,6 +203,21 @@ result = await agent.run("add error handling to api.py")
 - [Rich](https://github.com/Textualize/rich) - Beautiful terminal output
 - [MCP](https://modelcontextprotocol.io) - Model Context Protocol for agent interoperability
 
+## Known Incidents
+
+AI coding agents without proper safeguards have caused real damage. We document these incidents to raise awareness and demonstrate why preview-before-execute architecture matters.
+
+### Recent Incidents
+
+- **[Replit SaaStr Database Deletion (July 2025)](docs/incident-reports/2025-07-replit-saastr.md)** - Production database deleted, 1,200+ executives affected
+- **[Cursor YOLO Mode Bypass (July 2025)](docs/incident-reports/2025-07-cursor-yolo-mode.md)** - Security controls bypassed, arbitrary command execution possible
+
+### Submit an Incident
+
+Experienced an AI agent incident? Help the community by [submitting an incident report](.github/ISSUE_TEMPLATE/incident-report.md).
+
+Browse all documented incidents in [docs/incident-reports/](docs/incident-reports/).
+
 ## Marketing Helpers
 
 A lightweight CLI to generate headline variants, channel-specific copy (HN, Twitter/X, LinkedIn), and README hero blocks:
