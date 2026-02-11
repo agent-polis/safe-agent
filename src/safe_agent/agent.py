@@ -65,7 +65,7 @@ class SafeAgent:
         self.audit_trail: dict[str, Any] = {
             "audit_metadata": {
                 "export_version": "1.0",
-                "agent_version": "safe-agent 0.2.0",
+                "agent_version": "safe-agent 0.3.0",
                 "compliance_mode": compliance_mode,
             },
             "task": {},

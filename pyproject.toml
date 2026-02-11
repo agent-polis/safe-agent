@@ -1,6 +1,6 @@
 [project]
 name = "safe-agent-cli"
-version = "0.2.0"
+version = "0.3.0"
 description = "An AI coding agent you can actually trust - with built-in impact preview"
 readme = "README.md"
 license = {text = "MIT"}
