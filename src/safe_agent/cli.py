@@ -34,6 +34,8 @@ console = Console()
     help="Exit non-zero if any change meets/exceeds this risk level",
 )
 @click.option("--model", default="claude-sonnet-4-20250514", help="Claude model to use")
+@click.option("--audit-export", type=click.Path(), help="Export audit trail to JSON file")
+@click.option("--compliance-mode", is_flag=True, help="Enable strict compliance mode (disables auto-approve)")
 def main(
     task: str | None,
     file: str | None,
@@ -43,6 +45,8 @@ def main(
     non_interactive: bool,
     fail_on_risk: str | None,
     model: str,
+    audit_export: str | None,
+    compliance_mode: bool,
 ):
     """
     Safe Agent - An AI coding agent you can actually trust.
@@ -113,6 +117,8 @@ def main(
         dry_run=dry_run,
         non_interactive=inferred_non_interactive,
         fail_on_risk=fail_on_risk_level,
+        audit_export_path=audit_export,
+        compliance_mode=compliance_mode,
     )
     
     try:

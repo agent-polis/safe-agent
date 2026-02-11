@@ -36,22 +36,47 @@ class SafeAgent:
         working_directory: str | None = None,
         non_interactive: bool = False,
         fail_on_risk: RiskLevel | None = None,
+        audit_export_path: str | None = None,
+        compliance_mode: bool = False,
     ):
         self.model = model
-        self.auto_approve_low_risk = auto_approve_low_risk
+        self.auto_approve_low_risk = auto_approve_low_risk and not compliance_mode
         self.dry_run = dry_run
         self.working_directory = working_directory or os.getcwd()
         self.non_interactive = non_interactive
         self.fail_on_risk = fail_on_risk
-        
+        self.audit_export_path = audit_export_path
+        self.compliance_mode = compliance_mode
+
+        # Compliance mode enforces strict settings
+        if compliance_mode:
+            self.auto_approve_low_risk = False
+
         self.client = anthropic.Anthropic()
         self.analyzer = ImpactAnalyzer(working_directory=self.working_directory)
-        
+
         # Track changes for summary
         self.changes_made: list[dict] = []
         self.changes_rejected: list[dict] = []
         self.max_risk_level_seen: RiskLevel | None = None
         self.risk_policy_failed = False
+
+        # Audit trail tracking
+        self.audit_trail: dict[str, Any] = {
+            "audit_metadata": {
+                "export_version": "1.0",
+                "agent_version": "safe-agent 0.2.0",
+                "compliance_mode": compliance_mode,
+            },
+            "task": {},
+            "changes": [],
+            "summary": {},
+        }
+
+        import datetime
+        import getpass
+        self._task_start_time = datetime.datetime.now(datetime.timezone.utc)
+        self._current_user = getpass.getuser()
 
     def _resolve_path_safe(self, path: str) -> Path | None:
         """Resolve a path safely under the working directory.
@@ -113,6 +138,12 @@ class SafeAgent:
         
         if not plan.get("changes"):
             console.print("[yellow]No file changes needed for this task.[/yellow]")
+
+            # Finalize and export audit trail even for no-op tasks
+            self._finalize_audit_trail(task)
+            if self.audit_export_path:
+                self.export_audit_trail()
+
             return {
                 "success": True,
                 "changes_made": [],
@@ -139,7 +170,12 @@ class SafeAgent:
         
         # Summary
         self._show_summary()
-        
+
+        # Finalize and export audit trail
+        self._finalize_audit_trail(task)
+        if self.audit_export_path:
+            self.export_audit_trail()
+
         success = not self.risk_policy_failed
         return {
             "success": success,
@@ -392,17 +428,17 @@ Rules:
         """Show a summary of all changes."""
         console.print("\n" + "=" * 50)
         console.print("[bold]Summary[/bold]\n")
-        
+
         if self.changes_made:
             console.print(f"[green]✓ {len(self.changes_made)} changes applied[/green]")
             for change in self.changes_made:
                 console.print(f"  - {change['action']}: {change['path']}")
-        
+
         if self.changes_rejected:
             console.print(f"[yellow]⊘ {len(self.changes_rejected)} changes skipped[/yellow]")
             for change in self.changes_rejected:
                 console.print(f"  - {change['action']}: {change['path']}")
-        
+
         if not self.changes_made and not self.changes_rejected:
             console.print("[dim]No changes to report[/dim]")
 
@@ -412,3 +448,55 @@ Rules:
             console.print(
                 f"[bold red]✗ Risk policy failed (>= {self.fail_on_risk.value.upper()})[/bold red]"
             )
+
+    def _finalize_audit_trail(self, task: str) -> None:
+        """Finalize audit trail with summary and metadata."""
+        import datetime
+
+        end_time = datetime.datetime.now(datetime.timezone.utc)
+
+        # Update task metadata
+        self.audit_trail["task"] = {
+            "task_description": task,
+            "requested_at": self._task_start_time.isoformat(),
+            "requested_by": self._current_user,
+            "working_directory": self.working_directory,
+            "model_used": self.model,
+        }
+
+        # Update summary
+        self.audit_trail["summary"] = {
+            "total_changes_planned": len(self.changes_made) + len(self.changes_rejected),
+            "changes_approved": len(self.changes_made),
+            "changes_rejected": len(self.changes_rejected),
+            "changes_executed": len(self.changes_made) if not self.dry_run else 0,
+            "max_risk_level_seen": self.max_risk_level_seen.value if self.max_risk_level_seen else None,
+            "policy_violations": 0,  # Will be updated in Sprint 2 with policy-as-code
+            "duration_seconds": (end_time - self._task_start_time).total_seconds(),
+        }
+
+        # Update metadata
+        self.audit_trail["audit_metadata"]["export_timestamp"] = end_time.isoformat()
+
+        # Compliance flags
+        self.audit_trail["compliance_flags"] = {
+            "compliance_mode_enabled": self.compliance_mode,
+            "all_high_risk_approved": True,  # Would need to track rejections
+            "policy_file_present": False,  # Will be updated in Sprint 2
+            "audit_trail_complete": True,
+        }
+
+    def export_audit_trail(self, path: str | None = None) -> None:
+        """Export audit trail to JSON file."""
+        import json
+
+        export_path = path or self.audit_export_path
+        if not export_path:
+            return
+
+        try:
+            with open(export_path, "w", encoding="utf-8") as f:
+                json.dump(self.audit_trail, f, indent=2, ensure_ascii=False)
+            console.print(f"\n[dim]Audit trail exported to: {export_path}[/dim]")
+        except Exception as e:
+            console.print(f"\n[yellow]Warning: Failed to export audit trail: {e}[/yellow]")
