@@ -9,13 +9,13 @@ This document tracks tested compatibility between:
 
 | safe-agent-cli | impact-preview | Status | Notes |
 |---|---|---|---|
-| 0.2.x | >=0.2.1 | Supported | Baseline support for preview + risk analysis APIs. |
+| 0.3.x | >=0.2.1 | Supported | Baseline support for preview + risk analysis APIs. |
 
 ## Stage Feature Gates
 
 | Feature | safe-agent-cli min | impact-preview min | Status |
 |---|---|---|---|
-| Basic change preview and approval | 0.2.0 | 0.2.1 | Available |
+| Basic change preview and approval | 0.3.0 | 0.2.1 | Available |
 | Policy-as-code decision enforcement | TBD | TBD | Planned (Stage 1) |
 | Descriptor integrity checks | TBD | TBD | Planned (Stage 1) |
 | Injection scanner risk factors | TBD | TBD | Planned (Stage 1) |

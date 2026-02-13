@@ -1,7 +1,7 @@
 {
   "name": "Safe Agent",
   "description": "An AI coding agent with built-in impact preview - see exactly what will change before any file is modified",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "url": "https://github.com/agent-polis/safe-agent",
   "capabilities": [
     "code_generation",
