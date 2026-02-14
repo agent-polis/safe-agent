@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # For PyPI trusted publishing (OIDC)
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install build tools
+        run: python -m pip install --upgrade pip build twine
+
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, re, sys, tomllib
+          with open("pyproject.toml", "rb") as f:
+              data = tomllib.load(f)
+          version = data["project"]["version"]
+          tag = os.environ.get("GITHUB_REF_NAME", "")
+          expected = f"v{version}"
+          if not tag:
+              print("Missing GITHUB_REF_NAME", file=sys.stderr)
+              sys.exit(1)
+          if tag != expected:
+              print(f"Tag/version mismatch: tag={tag!r} expected={expected!r}", file=sys.stderr)
+              sys.exit(1)
+          if not re.fullmatch(r"v\\d+\\.\\d+\\.\\d+", tag):
+              print(f"Unexpected tag format: {tag!r}", file=sys.stderr)
+              sys.exit(1)
+          print(f"OK: publishing {tag}")
+          PY
+
+      - name: Build package
+        run: python -m build
+
+      - name: Twine check
+        run: python -m twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+

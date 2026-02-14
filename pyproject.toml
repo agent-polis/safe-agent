@@ -1,6 +1,6 @@
 [project]
 name = "safe-agent-cli"
-version = "0.3.0"
+version = "0.4.0"
 description = "An AI coding agent you can actually trust - with built-in impact preview"
 readme = "README.md"
 license = {text = "MIT"}
@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "impact-preview>=0.2.1",
+    "impact-preview>=0.2.2",
     "anthropic>=0.40.0",
     "click>=8.1.0",
     "rich>=13.0.0",
@@ -47,7 +47,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "impact-preview>=0.2.1",
+    "impact-preview>=0.2.2",
     "anthropic>=0.40.0",
     "click>=8.1.0",
     "rich>=13.0.0",

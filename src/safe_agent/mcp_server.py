@@ -66,6 +66,14 @@ async def list_tools() -> list[Tool]:
                         "description": "Fail the run if any change meets/exceeds this risk level",
                         "enum": ["low", "medium", "high", "critical"],
                     },
+                    "policy_path": {
+                        "type": "string",
+                        "description": "Path to a policy file (JSON/YAML) within working_directory for deterministic allow/deny/approval.",
+                    },
+                    "policy_preset": {
+                        "type": "string",
+                        "description": "Bundled policy preset id (e.g. startup, fintech, games).",
+                    },
                 },
                 "required": ["task"],
             },
@@ -94,6 +102,14 @@ async def list_tools() -> list[Tool]:
                     "working_directory": {
                         "type": "string",
                         "description": "Directory to analyze (defaults to current directory)",
+                    },
+                    "policy_path": {
+                        "type": "string",
+                        "description": "Optional policy file path (JSON/YAML) used for preview gating.",
+                    },
+                    "policy_preset": {
+                        "type": "string",
+                        "description": "Optional bundled policy preset id (e.g. startup, fintech, games).",
                     },
                 },
                 "required": ["task"],
@@ -148,6 +164,8 @@ async def _run_coding_task(args: dict[str, Any]) -> list[TextContent]:
     dry_run = args.get("dry_run", False)
     non_interactive = args.get("non_interactive", True)
     fail_on_risk = args.get("fail_on_risk")
+    policy_path = args.get("policy_path")
+    policy_preset = args.get("policy_preset")
     
     if not task:
         return [TextContent(type="text", text="Error: No task provided")]
@@ -172,6 +190,8 @@ async def _run_coding_task(args: dict[str, Any]) -> list[TextContent]:
             dry_run=dry_run,
             non_interactive=non_interactive,
             fail_on_risk=fail_on_risk_level,
+            policy_path=policy_path,
+            policy_preset=policy_preset,
         )
         
         result = await agent.run(task)
@@ -218,6 +238,8 @@ async def _preview_coding_task(args: dict[str, Any]) -> list[TextContent]:
     """Preview a coding task without executing."""
     task = args.get("task", "")
     working_dir = args.get("working_directory", os.getcwd())
+    policy_path = args.get("policy_path")
+    policy_preset = args.get("policy_preset")
     
     if not task:
         return [TextContent(type="text", text="Error: No task provided")]
@@ -232,6 +254,8 @@ async def _preview_coding_task(args: dict[str, Any]) -> list[TextContent]:
         agent = SafeAgent(
             working_directory=working_dir,
             dry_run=True,  # Always dry run for preview
+            policy_path=policy_path,
+            policy_preset=policy_preset,
         )
         
         # Get the plan without executing

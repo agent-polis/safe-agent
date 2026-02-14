@@ -106,6 +106,8 @@ Exit criteria:
 
 ## Agent-Product Tickets (`safe-agent-cli`)
 
+Status (Feb 2026): AS-101..AS-106 implemented in `safe-agent-cli` v0.4.0 (requires `impact-preview>=0.2.2`).
+
 1. AS-101 Policy decision enforcement
 - Integrate policy decision before execution path.
 - Block changes when platform decision is deny.
