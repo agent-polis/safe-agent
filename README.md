@@ -11,11 +11,11 @@ safe-agent "add error handling to api.py" --dry-run
 ```
 <!-- HERO_END -->
 
-### ✨ New in v0.3.0
+### ✨ New in v0.4.0
 
-- 🏥 **Insurance Integration** - Audit export for AI liability insurance carriers
-- 🇪🇺 **EU AI Act Ready** - Compliance mode for August 2026 enforcement
-- 📊 **Incident Database** - Community-sourced AI agent failure documentation
+- 🧭 **Policy-as-code enforcement** - Deterministic allow/deny/require-approval decisions before execution
+- 🎛️ **Policy presets** - `--policy-preset startup|fintech|games` plus `--list-policy-presets`
+- 🕵️ **Prompt injection scan surfaced** - Preview shows scanner severity + reason IDs
 
 ## Project Map
 
@@ -56,6 +56,8 @@ Step 1/1
 │ **File:** `config/db.yaml`                   │
 │ **Action:** MODIFY                           │
 │ **Risk:** 🔴 CRITICAL                        │
+│ **Policy:** REQUIRE_APPROVAL [builtin]       │
+│ **Scanner:** LOW                             │
 ╰──────────────────────────────────────────────╯
 
 Risk Factors:
@@ -98,11 +100,31 @@ safe-agent "add docstrings" --auto-approve-low
 
 ### CI / Non-interactive mode
 
-Use `--non-interactive` to avoid prompts (auto-approves LOW/MEDIUM, rejects HIGH/CRITICAL). Combine with
-`--fail-on-risk` to fail the process if risky changes are proposed:
+Use `--non-interactive` to avoid prompts (auto-approves when policy allows; skips anything requiring
+approval). Combine with `--fail-on-risk` to fail the process if risky changes are proposed:
 
 ```bash
 safe-agent "scan repository for risky config changes" --dry-run --non-interactive --fail-on-risk high
+```
+
+### Policy (allow/deny/require approval)
+
+By default Safe Agent enforces a built-in policy that:
+- denies obvious secret/key targets (e.g. `.env`, `.ssh`, `.pem`)
+- allows LOW/MEDIUM risk actions
+- requires approval for HIGH/CRITICAL risk actions
+
+Override with a bundled preset:
+
+```bash
+safe-agent --list-policy-presets
+safe-agent "update auth flow" --policy-preset fintech
+```
+
+Or load a policy file (JSON/YAML):
+
+```bash
+safe-agent "update auth flow" --policy ./policy.json
 ```
 
 ### Interactive Mode
@@ -182,6 +204,9 @@ We maintain a comprehensive database of AI agent incidents to raise awareness an
 | `--auto-approve-low` | Auto-approve low-risk changes |
 | `--non-interactive` | Run without prompts (CI-friendly) |
 | `--fail-on-risk` | Exit non-zero if any change meets/exceeds risk level |
+| `--policy` | Path to a policy file (JSON/YAML) for deterministic allow/deny/approval |
+| `--policy-preset` | Use a bundled policy preset (startup, fintech, games) |
+| `--list-policy-presets` | List available policy presets and exit |
 | `--interactive`, `-i` | Interactive mode |
 | `--file`, `-f` | Read task from file |
 | `--model` | Claude model to use (default: claude-sonnet-4-20250514) |

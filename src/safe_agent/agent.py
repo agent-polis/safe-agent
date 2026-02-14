@@ -2,6 +2,8 @@
 Safe Agent - Core agent logic with impact preview integration.
 """
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
 from typing import Any
@@ -17,6 +19,8 @@ from rich.table import Table
 from agent_polis.actions.analyzer import ImpactAnalyzer
 from agent_polis.actions.diff import format_diff_plain
 from agent_polis.actions.models import ActionRequest, ActionType, RiskLevel
+
+from safe_agent import __version__ as SAFE_AGENT_VERSION
 
 console = Console()
 
@@ -38,6 +42,8 @@ class SafeAgent:
         fail_on_risk: RiskLevel | None = None,
         audit_export_path: str | None = None,
         compliance_mode: bool = False,
+        policy_path: str | None = None,
+        policy_preset: str | None = None,
     ):
         self.model = model
         self.auto_approve_low_risk = auto_approve_low_risk and not compliance_mode
@@ -60,12 +66,14 @@ class SafeAgent:
         self.changes_rejected: list[dict] = []
         self.max_risk_level_seen: RiskLevel | None = None
         self.risk_policy_failed = False
+        self.governance_policy_failed = False
+        self.governance_policy_reason: str | None = None
 
         # Audit trail tracking
         self.audit_trail: dict[str, Any] = {
             "audit_metadata": {
                 "export_version": "1.0",
-                "agent_version": "safe-agent 0.3.0",
+                "agent_version": f"safe-agent {SAFE_AGENT_VERSION}",
                 "compliance_mode": compliance_mode,
             },
             "task": {},
@@ -77,6 +85,115 @@ class SafeAgent:
         import getpass
         self._task_start_time = datetime.datetime.now(datetime.timezone.utc)
         self._current_user = getpass.getuser()
+
+        # Governance / policy-as-code (impact-preview Stage 1+).
+        self._policy_source: str = "builtin"
+        self._policy_config: Any | None = None
+        self._policy_evaluator: Any | None = None
+        self._policy_decision_enum: Any | None = None
+        self._scanner: Any | None = None
+        self._init_governance(policy_path=policy_path, policy_preset=policy_preset)
+
+    def _init_governance(self, *, policy_path: str | None, policy_preset: str | None) -> None:
+        """
+        Initialize policy evaluator + prompt scanner.
+
+        We import these lazily so older installs fail with a clear error message.
+        """
+        try:
+            from agent_polis.governance.policy import PolicyConfig, PolicyDecision, PolicyEvaluator, PolicyRule
+            from agent_polis.governance.policy import load_policy_from_file
+            from agent_polis.governance.presets import load_policy_preset
+            from agent_polis.governance.prompt_scanner import PromptInjectionScanner
+        except ModuleNotFoundError as exc:  # pragma: no cover (exercised via integration)
+            raise RuntimeError(
+                "safe-agent-cli governance features require impact-preview>=0.2.2. "
+                "Upgrade with: pip install -U impact-preview"
+            ) from exc
+
+        if policy_path and policy_preset:
+            raise ValueError("Use either policy_path or policy_preset (not both).")
+
+        self._policy_evaluator = PolicyEvaluator()
+        self._policy_decision_enum = PolicyDecision
+        self._scanner = PromptInjectionScanner()
+
+        if policy_path:
+            # Avoid turning Safe Agent into an arbitrary file reader (especially via MCP tool calls).
+            # Allow absolute paths only if they resolve under the working directory.
+            raw = str(policy_path).strip()
+            base = Path(self.working_directory).resolve()
+            candidate = Path(raw)
+            if candidate.is_absolute():
+                resolved = candidate.resolve()
+                try:
+                    resolved.relative_to(base)
+                except ValueError as exc:
+                    raise ValueError(
+                        "policy_path must be within the working directory"
+                    ) from exc
+                resolved_path = resolved
+            else:
+                resolved_path = self._resolve_path_safe(raw)
+                if resolved_path is None:
+                    raise ValueError("Unsafe policy_path (must be within the working directory)")
+
+            self._policy_config = load_policy_from_file(resolved_path)
+            # Keep logs privacy-friendly: show a workdir-relative policy location.
+            rel = resolved_path.relative_to(base)
+            self._policy_source = f"file:{rel.as_posix()}"
+            return
+
+        if policy_preset:
+            self._policy_config = load_policy_preset(policy_preset)
+            self._policy_source = f"preset:{policy_preset}"
+            return
+
+        # Built-in policy: deny obvious secret/key targets and allow low/medium risk actions.
+        # Compliance mode is stricter: require approval for everything by omitting allow rules.
+        rules: list[Any] = [
+            PolicyRule(
+                id="builtin:deny-secrets-and-keys",
+                decision=PolicyDecision.DENY,
+                priority=0,
+                target_contains=[
+                    ".env",
+                    ".ssh",
+                    "id_rsa",
+                    "credentials",
+                    "secrets",
+                    "password",
+                    ".pem",
+                    "api_key",
+                    "secret_key",
+                    "access_key",
+                ],
+                metadata={
+                    "rationale": (
+                        "Secrets/key material should not be modified or handled by agent actions "
+                        "without explicit, out-of-band review."
+                    ),
+                },
+            ),
+        ]
+
+        if not self.compliance_mode:
+            rules.append(
+                PolicyRule(
+                    id="builtin:allow-low-and-medium-risk",
+                    decision=PolicyDecision.ALLOW,
+                    priority=100,
+                    max_risk_level=RiskLevel.MEDIUM,
+                    metadata={
+                        "rationale": (
+                            "Default Safe Agent policy allows low/medium risk actions; higher risk "
+                            "requires explicit approval."
+                        ),
+                    },
+                )
+            )
+
+        self._policy_config = PolicyConfig(version="safe-agent-builtin-1", rules=rules)
 
     def _resolve_path_safe(self, path: str) -> Path | None:
         """Resolve a path safely under the working directory.
@@ -126,6 +243,12 @@ class SafeAgent:
             return
         if self._risk_severity(level) > self._risk_severity(self.max_risk_level_seen):
             self.max_risk_level_seen = level
+
+    def _evaluate_governance(self, request: ActionRequest, risk_level: RiskLevel) -> tuple[Any, Any]:
+        """Return (policy_result, scan_result) for an action request."""
+        policy_result = self._policy_evaluator.evaluate(self._policy_config, request, risk_level=risk_level)
+        scan_result = self._scanner.scan_action_request(request)
+        return policy_result, scan_result
     
     async def run(self, task: str) -> dict[str, Any]:
         """
@@ -150,6 +273,8 @@ class SafeAgent:
                 "changes_rejected": [],
                 "max_risk_level_seen": None,
                 "risk_policy_failed": False,
+                "governance_policy_failed": False,
+                "governance_policy_reason": None,
             }
         
         # Show plan
@@ -176,13 +301,15 @@ class SafeAgent:
         if self.audit_export_path:
             self.export_audit_trail()
 
-        success = not self.risk_policy_failed
+        success = not (self.risk_policy_failed or self.governance_policy_failed)
         return {
             "success": success,
             "changes_made": self.changes_made,
             "changes_rejected": self.changes_rejected,
             "max_risk_level_seen": self.max_risk_level_seen.value if self.max_risk_level_seen else None,
             "risk_policy_failed": self.risk_policy_failed,
+            "governance_policy_failed": self.governance_policy_failed,
+            "governance_policy_reason": self.governance_policy_reason,
         }
     
     async def _plan_changes(self, task: str) -> dict[str, Any]:
@@ -321,12 +448,22 @@ Rules:
         preview = await self.analyzer.analyze(request)
         self._note_risk(preview.risk_level)
 
+        policy_result, scan_result = self._evaluate_governance(request, preview.risk_level)
+
         policy_triggered = bool(
             self.fail_on_risk
             and self._risk_severity(preview.risk_level) >= self._risk_severity(self.fail_on_risk)
         )
         if policy_triggered:
             self.risk_policy_failed = True
+
+        policy_decision = policy_result.decision
+        matched_rule = getattr(policy_result, "matched_rule_id", None)
+        scan_reason_ids = sorted({f.reason_id for f in getattr(scan_result, "findings", [])})
+        scan_max = getattr(scan_result, "max_severity", lambda: None)()
+        scan_max_str = getattr(scan_max, "value", str(scan_max)).upper() if scan_max else "NONE"
+        scan_reason_suffix = f" ({', '.join(scan_reason_ids)})" if scan_reason_ids else ""
+        policy_rule_suffix = f" (rule: {matched_rule})" if matched_rule else ""
         
         # Display preview
         risk_emoji = {
@@ -340,7 +477,10 @@ Rules:
             f"[bold]{change.get('description', path)}[/bold]\n\n"
             f"**File:** `{path}`\n"
             f"**Action:** {action.upper()}\n"
-            f"**Risk:** {risk_emoji} {preview.risk_level.value.upper()}",
+            f"**Risk:** {risk_emoji} {preview.risk_level.value.upper()}\n"
+            f"**Policy:** {getattr(policy_decision, 'value', str(policy_decision)).upper()}"
+            f"{policy_rule_suffix} [{self._policy_source}]\n"
+            f"**Scanner:** {scan_max_str}{scan_reason_suffix}",
             title=f"Impact Preview",
             border_style="yellow" if preview.risk_level in [RiskLevel.HIGH, RiskLevel.CRITICAL] else "blue",
         ))
@@ -367,6 +507,13 @@ Rules:
         
         console.print()
 
+        # Policy-as-code enforcement: DENY is never allowed to proceed.
+        if policy_decision == self._policy_decision_enum.DENY:
+            self.governance_policy_failed = True
+            self.governance_policy_reason = matched_rule or "policy_denied"
+            console.print("[red]✗ Policy decision: DENY[/red]")
+            return False
+
         if policy_triggered and self.fail_on_risk:
             console.print(
                 f"[red]✗ Policy: --fail-on-risk={self.fail_on_risk.value} "
@@ -375,14 +522,18 @@ Rules:
             return False
 
         if self.non_interactive:
-            if preview.risk_level in {RiskLevel.LOW, RiskLevel.MEDIUM}:
-                console.print("[green]✓ Auto-approved (non-interactive)[/green]")
+            if policy_decision == self._policy_decision_enum.ALLOW:
+                console.print("[green]✓ Auto-approved (policy allows; non-interactive)[/green]")
                 return True
-            console.print("[yellow]⊘ Auto-rejected (non-interactive)[/yellow]")
+            console.print("[yellow]⊘ Auto-rejected (policy requires approval; non-interactive)[/yellow]")
             return False
         
         # Auto-approve low risk if enabled
-        if self.auto_approve_low_risk and preview.risk_level == RiskLevel.LOW:
+        if (
+            self.auto_approve_low_risk
+            and preview.risk_level == RiskLevel.LOW
+            and policy_decision == self._policy_decision_enum.ALLOW
+        ):
             console.print("[green]✓ Auto-approved (low risk)[/green]")
             return True
         

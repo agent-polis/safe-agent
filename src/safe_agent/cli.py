@@ -33,6 +33,23 @@ console = Console()
     default=None,
     help="Exit non-zero if any change meets/exceeds this risk level",
 )
+@click.option(
+    "--policy",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help="Path to a policy file (JSON/YAML) within the working directory.",
+)
+@click.option(
+    "--policy-preset",
+    type=str,
+    default=None,
+    help="Use a bundled impact-preview policy preset (e.g. startup, fintech, games).",
+)
+@click.option(
+    "--list-policy-presets",
+    is_flag=True,
+    help="List available policy presets and exit.",
+)
 @click.option("--model", default="claude-sonnet-4-20250514", help="Claude model to use")
 @click.option("--audit-export", type=click.Path(), help="Export audit trail to JSON file")
 @click.option("--compliance-mode", is_flag=True, help="Enable strict compliance mode (disables auto-approve)")
@@ -44,6 +61,9 @@ def main(
     dry_run: bool,
     non_interactive: bool,
     fail_on_risk: str | None,
+    policy: str | None,
+    policy_preset: str | None,
+    list_policy_presets: bool,
     model: str,
     audit_export: str | None,
     compliance_mode: bool,
@@ -62,6 +82,25 @@ def main(
         
         safe-agent --interactive
     """
+    if list_policy_presets:
+        try:
+            from agent_polis.governance.presets import list_policy_presets as _list_policy_presets
+        except ModuleNotFoundError:
+            console.print(
+                "[red]Policy presets require impact-preview>=0.2.2.[/red] "
+                "Upgrade with: pip install -U impact-preview"
+            )
+            sys.exit(1)
+
+        presets = _list_policy_presets()
+        if not presets:
+            console.print("No presets available.")
+            sys.exit(0)
+        console.print("Available policy presets:")
+        for preset in presets:
+            console.print(f"- {preset.id}: {preset.name} — {preset.description}")
+        sys.exit(0)
+
     # Check for API key
     if not os.environ.get("ANTHROPIC_API_KEY"):
         console.print("[red]Error: ANTHROPIC_API_KEY environment variable not set[/red]")
@@ -119,12 +158,17 @@ def main(
         fail_on_risk=fail_on_risk_level,
         audit_export_path=audit_export,
         compliance_mode=compliance_mode,
+        policy_path=policy,
+        policy_preset=policy_preset,
     )
     
     try:
         result = asyncio.run(agent.run(task))
         if not result.get("success", False):
             sys.exit(2)
+    except RuntimeError as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        sys.exit(1)
     except KeyboardInterrupt:
         console.print("\n[yellow]Interrupted[/yellow]")
         sys.exit(1)

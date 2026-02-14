@@ -591,7 +591,7 @@ wheels = [
 
 [[package]]
 name = "impact-preview"
-version = "0.2.1"
+version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "alembic" },
@@ -611,9 +611,9 @@ dependencies = [
     { name = "tenacity" },
     { name = "uvicorn", extra = ["standard"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3c/10/73a68fa06bebb926192b34800b07049b6c9bceffd1cde012c371c26fbb9b/impact_preview-0.2.1.tar.gz", hash = "sha256:16cb15c435a3e1a09b8318808e9a64a508e6d7aeb329ee0980d32a5b32e43a1a", size = 58201, upload-time = "2026-02-01T07:22:53.59Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/34/d2/d52057dad5fdc78cd15588ba6109d6b6509358c915605c4cb382f1432e40/impact_preview-0.2.2.tar.gz", hash = "sha256:5c8c63a0eb633321521b5b8f6af502d5b79bb8bfa083db02073ecc52576b1c92", size = 69074, upload-time = "2026-02-14T07:01:24.031Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/63/b4bc3c7a1a3f57bea615a3697c07c2faa107c0763ca8b4394577ca117fe2/impact_preview-0.2.1-py3-none-any.whl", hash = "sha256:6ed0397843f1105183dda961c4a5183949f8b7aa0f5dee593663d5ce5ceadac6", size = 76967, upload-time = "2026-02-01T07:22:52.188Z" },
+    { url = "https://files.pythonhosted.org/packages/97/e1/d9fb2e05428c3a1ba85fba99039bbae593e432b9c0f93ddcd61ae0f3e7f5/impact_preview-0.2.2-py3-none-any.whl", hash = "sha256:c59405568def7a388c97001e5f9c9533fb0a9b57cb9d1fb6f7e7454ccee4054b", size = 90617, upload-time = "2026-02-14T07:01:22.297Z" },
 ]
 
 [[package]]
@@ -1421,7 +1421,7 @@ wheels = [
 
 [[package]]
 name = "safe-agent-cli"
-version = "0.3.0"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -1444,7 +1444,7 @@ requires-dist = [
     { name = "anthropic", specifier = ">=0.40.0" },
     { name = "click", specifier = ">=8.1.0" },
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "impact-preview", specifier = ">=0.2.1" },
+    { name = "impact-preview", specifier = ">=0.2.2" },
     { name = "mcp", specifier = ">=1.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
