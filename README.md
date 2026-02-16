@@ -11,11 +11,12 @@ safe-agent "add error handling to api.py" --dry-run
 ```
 <!-- HERO_END -->
 
-### ✨ New in v0.4.0
+### ✨ New in v0.4.1
 
-- 🧭 **Policy-as-code enforcement** - Deterministic allow/deny/require-approval decisions before execution
-- 🎛️ **Policy presets** - `--policy-preset startup|fintech|games` plus `--list-policy-presets`
-- 🕵️ **Prompt injection scan surfaced** - Preview shows scanner severity + reason IDs
+- 🚦 **PR risk gate workflow** - Production-ready GitHub workflow + local composite action for CI adoption
+- 📄 **CI artifacts** - `--ci-summary-file` and `--policy-report` for reviewer-friendly markdown + machine-readable output
+- 📈 **Weekly analytics summary** - `safe-agent-marketing weekly-summary` for stars/traffic/click deltas
+- 🎛️ **Preset docs + guidance** - Preset quickstarts plus clearer invalid-preset feedback
 
 ## Project Map
 
@@ -23,6 +24,7 @@ safe-agent "add error handling to api.py" --dry-run
 - **safe-agent-cli (this repo)**: a reference coding agent that uses impact-preview for approvals.
 - **Roadmap**: staged execution plan in [`ROADMAP.md`](ROADMAP.md).
 - **Compatibility Matrix**: version contract in [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md).
+- **What's New (v0.4.1)**: release summary and launch copy in [`docs/whats-new-v0.4.1.md`](docs/whats-new-v0.4.1.md).
 - **Monday Packet**: current assignment bundle in [`docs/monday-assignment-packet.md`](docs/monday-assignment-packet.md).
 
 ## The Problem

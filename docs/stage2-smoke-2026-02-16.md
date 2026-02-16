@@ -10,7 +10,7 @@ Status: PASS
 
 ## Environment
 
-- `safe-agent-cli==0.4.0`
+- `safe-agent-cli==0.4.1`
 - `impact-preview==0.2.2`
 - Script uses a temporary isolated venv during execution.
 
