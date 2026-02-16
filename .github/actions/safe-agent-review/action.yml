@@ -1,0 +1,110 @@
+name: "Safe Agent Review"
+description: "Run safe-agent in CI mode and emit summary/report artifacts."
+inputs:
+  task:
+    description: "Task for safe-agent to run."
+    required: false
+    default: "scan repository for risky configuration and secret-handling changes; do not edit files"
+  python-version:
+    description: "Python version used to run safe-agent."
+    required: false
+    default: "3.11"
+  fail-on-risk:
+    description: "Fail threshold for risk level."
+    required: false
+    default: "high"
+  dry-run:
+    description: "Run safe-agent in dry-run mode."
+    required: false
+    default: "true"
+  policy-file:
+    description: "Optional path to policy JSON/YAML file."
+    required: false
+    default: ""
+  policy-preset:
+    description: "Optional policy preset (startup|fintech|games)."
+    required: false
+    default: ""
+  working-directory:
+    description: "Working directory to evaluate."
+    required: false
+    default: "."
+  artifact-dir:
+    description: "Directory where summary/report/log files are written."
+    required: false
+    default: ".safe-agent-ci"
+  anthropic-api-key:
+    description: "Anthropic API key."
+    required: true
+outputs:
+  summary_path:
+    description: "Markdown summary output path."
+    value: ${{ steps.run.outputs.summary_path }}
+  policy_report_path:
+    description: "Machine-readable policy report path."
+    value: ${{ steps.run.outputs.policy_report_path }}
+  log_path:
+    description: "safe-agent run log path."
+    value: ${{ steps.run.outputs.log_path }}
+  exit_code:
+    description: "safe-agent process exit code."
+    value: ${{ steps.run.outputs.exit_code }}
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install safe-agent from repo source
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        python -m pip install --upgrade pip
+        pip install .
+
+    - id: run
+      name: Run safe-agent risk gate
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+      run: |
+        set +e
+        mkdir -p "${{ inputs.artifact-dir }}"
+        summary_path="${{ inputs.artifact-dir }}/safe-agent-summary.md"
+        policy_report_path="${{ inputs.artifact-dir }}/policy-report.json"
+        log_path="${{ inputs.artifact-dir }}/safe-agent.log"
+
+        cmd=(
+          safe-agent
+          "${{ inputs.task }}"
+          --non-interactive
+          --fail-on-risk
+          "${{ inputs.fail-on-risk }}"
+          --ci-summary-file
+          "${summary_path}"
+          --policy-report
+          "${policy_report_path}"
+        )
+
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          cmd+=(--dry-run)
+        fi
+        if [ -n "${{ inputs.policy-file }}" ]; then
+          cmd+=(--policy "${{ inputs.policy-file }}")
+        fi
+        if [ -n "${{ inputs.policy-preset }}" ]; then
+          cmd+=(--policy-preset "${{ inputs.policy-preset }}")
+        fi
+
+        "${cmd[@]}" 2>&1 | tee "${log_path}"
+        exit_code=$?
+
+        echo "summary_path=${summary_path}" >> "$GITHUB_OUTPUT"
+        echo "policy_report_path=${policy_report_path}" >> "$GITHUB_OUTPUT"
+        echo "log_path=${log_path}" >> "$GITHUB_OUTPUT"
+        echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+
+        exit "${exit_code}"

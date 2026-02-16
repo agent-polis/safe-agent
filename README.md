@@ -107,6 +107,17 @@ approval). Combine with `--fail-on-risk` to fail the process if risky changes ar
 safe-agent "scan repository for risky config changes" --dry-run --non-interactive --fail-on-risk high
 ```
 
+For CI artifacts, also emit a markdown summary and machine-readable report:
+
+```bash
+safe-agent "scan repository for risky config changes" \
+  --dry-run \
+  --non-interactive \
+  --fail-on-risk high \
+  --ci-summary-file .safe-agent-ci/summary.md \
+  --policy-report .safe-agent-ci/policy-report.json
+```
+
 ### Policy (allow/deny/require approval)
 
 By default Safe Agent enforces a built-in policy that:
@@ -212,6 +223,9 @@ We maintain a comprehensive database of AI agent incidents to raise awareness an
 | `--model` | Claude model to use (default: claude-sonnet-4-20250514) |
 | `--audit-export` | Export audit trail to JSON file (insurance/compliance) |
 | `--compliance-mode` | Enable strict compliance mode (disables auto-approve) |
+| `--ci-summary` | Print a concise markdown CI summary block |
+| `--ci-summary-file` | Write CI summary markdown to a file |
+| `--policy-report` | Write machine-readable policy/scanner report JSON |
 
 ## MCP Server (For Other AI Agents)
 
@@ -259,6 +273,18 @@ safe-agent-demo prepare  # creates a demo repo with config/db.yaml
 cd /tmp/safe-agent-demo-*  # or your chosen path
 safe-agent-demo record     # shows asciinema + GIF commands
 ```
+
+## GitHub PR Risk Gate
+
+This repo ships a production workflow and local composite action for PR gating:
+
+- Workflow: `.github/workflows/safe-agent-pr-review.yml`
+- Action: `.github/actions/safe-agent-review/action.yml`
+
+The workflow runs on PRs (non-forks) and manual dispatch, then uploads:
+- `safe-agent-summary.md` (human-readable markdown summary)
+- `policy-report.json` (machine-readable report with rule IDs/outcomes)
+- `safe-agent.log` (full run log)
 
 By default the demo runs `safe-agent --dry-run "switch database config to production"` against the prepared repo.
 
