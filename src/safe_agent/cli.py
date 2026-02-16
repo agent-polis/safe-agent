@@ -172,17 +172,23 @@ def main(
         fail_on_risk_level = RiskLevel(fail_on_risk.lower())
     
     # Create agent and run
-    agent = SafeAgent(
-        model=model,
-        auto_approve_low_risk=auto_approve_low,
-        dry_run=dry_run,
-        non_interactive=inferred_non_interactive,
-        fail_on_risk=fail_on_risk_level,
-        audit_export_path=audit_export,
-        compliance_mode=compliance_mode,
-        policy_path=policy,
-        policy_preset=policy_preset,
-    )
+    try:
+        agent = SafeAgent(
+            model=model,
+            auto_approve_low_risk=auto_approve_low,
+            dry_run=dry_run,
+            non_interactive=inferred_non_interactive,
+            fail_on_risk=fail_on_risk_level,
+            audit_export_path=audit_export,
+            compliance_mode=compliance_mode,
+            policy_path=policy,
+            policy_preset=policy_preset,
+        )
+    except ValueError as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        if policy_preset:
+            console.print("Use [bold]safe-agent --list-policy-presets[/bold] to see valid preset IDs.")
+        sys.exit(1)
     
     try:
         result = asyncio.run(agent.run(task))

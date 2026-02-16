@@ -73,3 +73,88 @@ def test_ci_summary_and_policy_report_files_are_written(monkeypatch) -> None:
         assert report_path.exists()
         report = json.loads(report_path.read_text(encoding="utf-8"))
         assert report["status"] == "passed"
+
+
+def test_invalid_policy_preset_shows_guidance(monkeypatch) -> None:
+    """CLI should surface actionable guidance when preset lookup fails."""
+
+    class BadPresetAgent:
+        def __init__(self, **kwargs) -> None:
+            raise ValueError("Unknown policy preset: nope")
+
+    monkeypatch.setattr("safe_agent.cli.SafeAgent", BadPresetAgent)
+    result = runner.invoke(
+        main,
+        ["scan repo", "--policy-preset", "nope", "--dry-run", "--non-interactive"],
+        env={"ANTHROPIC_API_KEY": "test-key"},
+    )
+
+    assert result.exit_code == 1
+    assert "Unknown policy preset" in result.output
+    assert "list-policy-presets" in result.output
+
+
+def test_policy_preset_is_passed_to_agent(monkeypatch) -> None:
+    """CLI wires --policy-preset through to SafeAgent constructor."""
+
+    captured: dict[str, object] = {}
+
+    class DummyAgent:
+        def __init__(self, **kwargs) -> None:
+            captured.update(kwargs)
+
+        async def run(self, task: str) -> dict:
+            return {"success": True}
+
+        def build_ci_summary(self) -> str:
+            return "ok"
+
+        def build_policy_report(self) -> dict:
+            return {"status": "passed"}
+
+    monkeypatch.setattr("safe_agent.cli.SafeAgent", DummyAgent)
+    result = runner.invoke(
+        main,
+        ["scan repo", "--policy-preset", "fintech", "--dry-run", "--non-interactive"],
+        env={"ANTHROPIC_API_KEY": "test-key"},
+    )
+
+    assert result.exit_code == 0
+    assert captured.get("policy_preset") == "fintech"
+
+
+def test_policy_report_written_even_when_run_fails(monkeypatch) -> None:
+    """CI artifacts should still be written when SafeAgent exits non-success."""
+
+    class FailingAgent:
+        def __init__(self, **kwargs) -> None:
+            pass
+
+        async def run(self, task: str) -> dict:
+            return {"success": False}
+
+        def build_ci_summary(self) -> str:
+            return "### Safe Agent CI Summary\n- Result: FAIL\n"
+
+        def build_policy_report(self) -> dict:
+            return {"status": "failed", "events": [{"outcome": "blocked_by_fail_on_risk"}]}
+
+    monkeypatch.setattr("safe_agent.cli.SafeAgent", FailingAgent)
+
+    with runner.isolated_filesystem():
+        report_path = Path("out/policy.json")
+        result = runner.invoke(
+            main,
+            [
+                "scan repo",
+                "--non-interactive",
+                "--dry-run",
+                "--policy-report",
+                str(report_path),
+            ],
+            env={"ANTHROPIC_API_KEY": "test-key"},
+        )
+        assert result.exit_code == 2
+        assert report_path.exists()
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        assert report["status"] == "failed"
