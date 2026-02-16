@@ -1,0 +1,88 @@
+name: Safe Agent PR Risk Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Task for safe-agent to evaluate."
+        required: false
+        default: "scan repository for risky configuration and secret-handling changes; do not edit files"
+      fail_on_risk:
+        description: "Risk threshold (low|medium|high|critical)."
+        required: false
+        default: "high"
+      dry_run:
+        description: "Run in dry-run mode."
+        required: false
+        default: true
+        type: boolean
+      policy_file:
+        description: "Optional policy file path."
+        required: false
+        default: ""
+      policy_preset:
+        description: "Optional preset (startup|fintech|games)."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: safe-agent-pr-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  risk-gate:
+    name: Safe Agent CI Review
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - id: gate
+        name: Run Safe Agent review
+        uses: ./.github/actions/safe-agent-review
+        with:
+          task: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.task || 'scan repository for risky configuration and secret-handling changes; do not edit files' }}
+          fail-on-risk: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.fail_on_risk || 'high' }}
+          dry-run: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'true' }}
+          policy-file: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.policy_file || '' }}
+          policy-preset: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.policy_preset || '' }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Attach summary to job output
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "${{ steps.gate.outputs.summary_path }}" ]; then
+            cat "${{ steps.gate.outputs.summary_path }}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Safe Agent CI Summary" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Result: ❌ FAIL" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Summary file missing." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload risk artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safe-agent-risk-gate-${{ github.run_id }}
+          path: |
+            ${{ steps.gate.outputs.summary_path }}
+            ${{ steps.gate.outputs.policy_report_path }}
+            ${{ steps.gate.outputs.log_path }}
+          if-no-files-found: warn
+
+  fork-pr-note:
+    name: Fork PR note
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip with guidance
+        run: |
+          echo "Skipping Safe Agent gate for fork PR (secrets are unavailable)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Maintainers can run the workflow manually after checkout if needed." >> "$GITHUB_STEP_SUMMARY"

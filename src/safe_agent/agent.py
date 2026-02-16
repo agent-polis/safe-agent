@@ -68,6 +68,7 @@ class SafeAgent:
         self.risk_policy_failed = False
         self.governance_policy_failed = False
         self.governance_policy_reason: str | None = None
+        self._governance_events: list[dict[str, Any]] = []
 
         # Audit trail tracking
         self.audit_trail: dict[str, Any] = {
@@ -249,6 +250,134 @@ class SafeAgent:
         policy_result = self._policy_evaluator.evaluate(self._policy_config, request, risk_level=risk_level)
         scan_result = self._scanner.scan_action_request(request)
         return policy_result, scan_result
+
+    def _record_governance_event(
+        self,
+        *,
+        path: str,
+        action: str,
+        risk_level: RiskLevel | None,
+        policy_decision: str | None,
+        matched_rule_id: str | None,
+        scanner_severity: str | None,
+        scanner_reason_ids: list[str],
+        outcome: str,
+    ) -> None:
+        """Capture CI-facing policy/scanner details per proposed change."""
+        self._governance_events.append(
+            {
+                "path": path,
+                "action": action,
+                "risk_level": risk_level.value if risk_level else None,
+                "policy_decision": policy_decision,
+                "matched_rule_id": matched_rule_id,
+                "scanner_severity": scanner_severity,
+                "scanner_reason_ids": scanner_reason_ids,
+                "outcome": outcome,
+            }
+        )
+
+    def _recommended_next_actions(self) -> list[str]:
+        actions: list[str] = []
+        blocking_rule_ids = sorted(
+            {
+                event["matched_rule_id"]
+                for event in self._governance_events
+                if event.get("outcome") == "blocked_by_policy_deny" and event.get("matched_rule_id")
+            }
+        )
+        scanner_reason_ids = sorted(
+            {
+                reason
+                for event in self._governance_events
+                for reason in event.get("scanner_reason_ids", [])
+            }
+        )
+
+        if blocking_rule_ids:
+            actions.append(
+                "Review blocking policy rules "
+                f"({', '.join(blocking_rule_ids)}) and adjust task scope or policy."
+            )
+        if self.risk_policy_failed and self.fail_on_risk:
+            actions.append(
+                f"Reduce change risk or adjust --fail-on-risk (currently {self.fail_on_risk.value})."
+            )
+        if any(event.get("outcome") == "blocked_non_interactive_requires_approval" for event in self._governance_events):
+            actions.append("Re-run interactively for manual approvals or use a more permissive preset.")
+        if scanner_reason_ids:
+            actions.append(
+                "Investigate scanner findings before merge "
+                f"({', '.join(scanner_reason_ids)})."
+            )
+        if not actions:
+            actions.append("No blocking findings. Safe to continue with normal review.")
+        return actions
+
+    def build_ci_summary(self) -> str:
+        """Build a concise markdown summary for CI logs or PR comments."""
+        status = "FAIL" if (self.risk_policy_failed or self.governance_policy_failed) else "PASS"
+        status_icon = "❌" if status == "FAIL" else "✅"
+        max_risk = self.max_risk_level_seen.value.upper() if self.max_risk_level_seen else "NONE"
+        blocking_rule_ids = sorted(
+            {
+                event["matched_rule_id"]
+                for event in self._governance_events
+                if event.get("outcome") == "blocked_by_policy_deny" and event.get("matched_rule_id")
+            }
+        )
+        scanner_reason_ids = sorted(
+            {
+                reason
+                for event in self._governance_events
+                for reason in event.get("scanner_reason_ids", [])
+            }
+        )
+
+        lines = [
+            "### Safe Agent CI Summary",
+            f"- Result: {status_icon} {status}",
+            f"- Planned changes: {len(self._governance_events)}",
+            f"- Applied changes: {len(self.changes_made)}",
+            f"- Skipped/rejected changes: {len(self.changes_rejected)}",
+            f"- Max risk seen: {max_risk}",
+            (
+                "- Blocking policy rules: "
+                + (", ".join(f"`{rule}`" for rule in blocking_rule_ids) if blocking_rule_ids else "none")
+            ),
+            (
+                "- Scanner reason IDs: "
+                + (", ".join(f"`{reason}`" for reason in scanner_reason_ids) if scanner_reason_ids else "none")
+            ),
+            "- Recommended next actions:",
+        ]
+        for action in self._recommended_next_actions():
+            lines.append(f"  - {action}")
+        return "\n".join(lines)
+
+    def build_policy_report(self) -> dict[str, Any]:
+        """Build machine-readable policy/scanner report for CI artifacts."""
+        status = "failed" if (self.risk_policy_failed or self.governance_policy_failed) else "passed"
+        max_risk = self.max_risk_level_seen.value if self.max_risk_level_seen else None
+        blocking_rule_ids = sorted(
+            {
+                event["matched_rule_id"]
+                for event in self._governance_events
+                if event.get("outcome") == "blocked_by_policy_deny" and event.get("matched_rule_id")
+            }
+        )
+        return {
+            "status": status,
+            "policy_source": self._policy_source,
+            "fail_on_risk": self.fail_on_risk.value if self.fail_on_risk else None,
+            "max_risk_level_seen": max_risk,
+            "risk_policy_failed": self.risk_policy_failed,
+            "governance_policy_failed": self.governance_policy_failed,
+            "governance_policy_reason": self.governance_policy_reason,
+            "blocking_rule_ids": blocking_rule_ids,
+            "recommended_next_actions": self._recommended_next_actions(),
+            "events": self._governance_events,
+        }
     
     async def run(self, task: str) -> dict[str, Any]:
         """
@@ -423,6 +552,16 @@ Rules:
                 self.fail_on_risk
             ):
                 self.risk_policy_failed = True
+            self._record_governance_event(
+                path=path,
+                action=action,
+                risk_level=RiskLevel.CRITICAL,
+                policy_decision=None,
+                matched_rule_id=None,
+                scanner_severity=None,
+                scanner_reason_ids=[],
+                outcome="blocked_unsafe_path",
+            )
             return False
         
         # Map to ActionType
@@ -434,6 +573,16 @@ Rules:
             action_type = ActionType.FILE_DELETE
         else:
             console.print(f"[red]Unknown action: {action}[/red]")
+            self._record_governance_event(
+                path=path,
+                action=action,
+                risk_level=None,
+                policy_decision=None,
+                matched_rule_id=None,
+                scanner_severity=None,
+                scanner_reason_ids=[],
+                outcome="blocked_unknown_action",
+            )
             return False
         
         # Create request
@@ -511,10 +660,30 @@ Rules:
         if policy_decision == self._policy_decision_enum.DENY:
             self.governance_policy_failed = True
             self.governance_policy_reason = matched_rule or "policy_denied"
+            self._record_governance_event(
+                path=path,
+                action=action,
+                risk_level=preview.risk_level,
+                policy_decision=getattr(policy_decision, "value", str(policy_decision)),
+                matched_rule_id=matched_rule,
+                scanner_severity=scan_max_str.lower() if scan_max_str else None,
+                scanner_reason_ids=scan_reason_ids,
+                outcome="blocked_by_policy_deny",
+            )
             console.print("[red]✗ Policy decision: DENY[/red]")
             return False
 
         if policy_triggered and self.fail_on_risk:
+            self._record_governance_event(
+                path=path,
+                action=action,
+                risk_level=preview.risk_level,
+                policy_decision=getattr(policy_decision, "value", str(policy_decision)),
+                matched_rule_id=matched_rule,
+                scanner_severity=scan_max_str.lower() if scan_max_str else None,
+                scanner_reason_ids=scan_reason_ids,
+                outcome="blocked_by_fail_on_risk",
+            )
             console.print(
                 f"[red]✗ Policy: --fail-on-risk={self.fail_on_risk.value} "
                 f"(saw {preview.risk_level.value})[/red]"
@@ -523,8 +692,28 @@ Rules:
 
         if self.non_interactive:
             if policy_decision == self._policy_decision_enum.ALLOW:
+                self._record_governance_event(
+                    path=path,
+                    action=action,
+                    risk_level=preview.risk_level,
+                    policy_decision=getattr(policy_decision, "value", str(policy_decision)),
+                    matched_rule_id=matched_rule,
+                    scanner_severity=scan_max_str.lower() if scan_max_str else None,
+                    scanner_reason_ids=scan_reason_ids,
+                    outcome="approved_non_interactive",
+                )
                 console.print("[green]✓ Auto-approved (policy allows; non-interactive)[/green]")
                 return True
+            self._record_governance_event(
+                path=path,
+                action=action,
+                risk_level=preview.risk_level,
+                policy_decision=getattr(policy_decision, "value", str(policy_decision)),
+                matched_rule_id=matched_rule,
+                scanner_severity=scan_max_str.lower() if scan_max_str else None,
+                scanner_reason_ids=scan_reason_ids,
+                outcome="blocked_non_interactive_requires_approval",
+            )
             console.print("[yellow]⊘ Auto-rejected (policy requires approval; non-interactive)[/yellow]")
             return False
         
@@ -534,11 +723,31 @@ Rules:
             and preview.risk_level == RiskLevel.LOW
             and policy_decision == self._policy_decision_enum.ALLOW
         ):
+            self._record_governance_event(
+                path=path,
+                action=action,
+                risk_level=preview.risk_level,
+                policy_decision=getattr(policy_decision, "value", str(policy_decision)),
+                matched_rule_id=matched_rule,
+                scanner_severity=scan_max_str.lower() if scan_max_str else None,
+                scanner_reason_ids=scan_reason_ids,
+                outcome="approved_auto_low_risk",
+            )
             console.print("[green]✓ Auto-approved (low risk)[/green]")
             return True
-        
+
         # Dry run mode
         if self.dry_run:
+            self._record_governance_event(
+                path=path,
+                action=action,
+                risk_level=preview.risk_level,
+                policy_decision=getattr(policy_decision, "value", str(policy_decision)),
+                matched_rule_id=matched_rule,
+                scanner_severity=scan_max_str.lower() if scan_max_str else None,
+                scanner_reason_ids=scan_reason_ids,
+                outcome="blocked_dry_run",
+            )
             console.print("[yellow]Dry run - not executing[/yellow]")
             return False
         
@@ -546,7 +755,18 @@ Rules:
         if preview.risk_level == RiskLevel.CRITICAL:
             console.print("[bold red]⚠️  CRITICAL RISK - Please review carefully![/bold red]")
         
-        return Confirm.ask("Apply this change?", default=preview.risk_level == RiskLevel.LOW)
+        approved = Confirm.ask("Apply this change?", default=preview.risk_level == RiskLevel.LOW)
+        self._record_governance_event(
+            path=path,
+            action=action,
+            risk_level=preview.risk_level,
+            policy_decision=getattr(policy_decision, "value", str(policy_decision)),
+            matched_rule_id=matched_rule,
+            scanner_severity=scan_max_str.lower() if scan_max_str else None,
+            scanner_reason_ids=scan_reason_ids,
+            outcome="approved_interactive" if approved else "rejected_interactive",
+        )
+        return approved
     
     def _execute_change(self, change: dict) -> None:
         """Execute an approved change."""
@@ -616,13 +836,16 @@ Rules:
         }
 
         # Update summary
+        policy_violations = sum(
+            1 for event in self._governance_events if event.get("outcome") == "blocked_by_policy_deny"
+        )
         self.audit_trail["summary"] = {
             "total_changes_planned": len(self.changes_made) + len(self.changes_rejected),
             "changes_approved": len(self.changes_made),
             "changes_rejected": len(self.changes_rejected),
             "changes_executed": len(self.changes_made) if not self.dry_run else 0,
             "max_risk_level_seen": self.max_risk_level_seen.value if self.max_risk_level_seen else None,
-            "policy_violations": 0,  # Will be updated in Sprint 2 with policy-as-code
+            "policy_violations": policy_violations,
             "duration_seconds": (end_time - self._task_start_time).total_seconds(),
         }
 
@@ -633,7 +856,7 @@ Rules:
         self.audit_trail["compliance_flags"] = {
             "compliance_mode_enabled": self.compliance_mode,
             "all_high_risk_approved": True,  # Would need to track rejections
-            "policy_file_present": False,  # Will be updated in Sprint 2
+            "policy_file_present": self._policy_source.startswith("file:"),
             "audit_trail_complete": True,
         }
 

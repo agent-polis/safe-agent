@@ -8,8 +8,10 @@ Usage:
 """
 
 import asyncio
+import json
 import os
 import sys
+from pathlib import Path
 
 import click
 from rich.console import Console
@@ -53,6 +55,23 @@ console = Console()
 @click.option("--model", default="claude-sonnet-4-20250514", help="Claude model to use")
 @click.option("--audit-export", type=click.Path(), help="Export audit trail to JSON file")
 @click.option("--compliance-mode", is_flag=True, help="Enable strict compliance mode (disables auto-approve)")
+@click.option(
+    "--ci-summary",
+    is_flag=True,
+    help="Print a concise markdown CI summary block.",
+)
+@click.option(
+    "--ci-summary-file",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Write CI summary markdown to a file.",
+)
+@click.option(
+    "--policy-report",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Write machine-readable policy/scanner report JSON.",
+)
 def main(
     task: str | None,
     file: str | None,
@@ -67,6 +86,9 @@ def main(
     model: str,
     audit_export: str | None,
     compliance_mode: bool,
+    ci_summary: bool,
+    ci_summary_file: str | None,
+    policy_report: str | None,
 ):
     """
     Safe Agent - An AI coding agent you can actually trust.
@@ -164,6 +186,24 @@ def main(
     
     try:
         result = asyncio.run(agent.run(task))
+        if ci_summary or ci_summary_file:
+            summary = agent.build_ci_summary()
+            if ci_summary:
+                console.print()
+                console.print(summary)
+            if ci_summary_file:
+                summary_path = Path(ci_summary_file)
+                summary_path.parent.mkdir(parents=True, exist_ok=True)
+                summary_path.write_text(summary + "\n", encoding="utf-8")
+                console.print(f"[dim]CI summary written to: {summary_path}[/dim]")
+
+        if policy_report:
+            report = agent.build_policy_report()
+            report_path = Path(policy_report)
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            console.print(f"[dim]Policy report written to: {report_path}[/dim]")
+
         if not result.get("success", False):
             sys.exit(2)
     except RuntimeError as exc:
