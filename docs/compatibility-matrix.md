@@ -11,7 +11,7 @@ This document tracks tested compatibility between:
 |---|---|---|---|
 | 0.3.x | >=0.2.1 | Supported | Baseline support for preview + risk analysis APIs. |
 | 0.4.x | >=0.2.2 | Supported | Stage 1 governance (policy + scanner surfacing). |
-| 0.4.1 | >=0.2.2 | Supported | Stage 2 CI adoption features (PR risk gate + CI artifacts + weekly summary). |
+| 0.4.2 | >=0.2.2 | Supported | Stage 2 CI adoption features (PR risk gate + CI artifacts) plus release-surface hardening. |
 
 ## Stage Feature Gates
 
@@ -23,7 +23,6 @@ This document tracks tested compatibility between:
 | Injection scanner risk factors | 0.4.0 | 0.2.2 | Available |
 | CI markdown summary + policy report artifacts | 0.4.1 | 0.2.2 | Available |
 | PR risk gate workflow (`safe-agent-pr-review.yml`) | 0.4.1 | 0.2.2 | Available |
-| Weekly analytics summary (`safe-agent-marketing weekly-summary`) | 0.4.1 | N/A | Available |
 
 ## Validation Checklist (Per Release)
 
@@ -33,7 +32,6 @@ This document tracks tested compatibility between:
 4. Confirm expected risk levels and exit codes.
 5. Record results in release notes.
 6. Run PR risk gate workflow and verify summary/report artifacts upload.
-7. Validate weekly summary command output format remains stable.
 
 Latest smoke record: [docs/stage2-smoke-2026-02-16.md](stage2-smoke-2026-02-16.md)
 

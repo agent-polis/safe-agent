@@ -11,11 +11,11 @@ safe-agent "add error handling to api.py" --dry-run
 ```
 <!-- HERO_END -->
 
-### ✨ New in v0.4.1
+### ✨ New in v0.4.2
 
+- 🔒 **Release surface hardening** - Public package now ships only `safe-agent` and `safe-agent-mcp` entry points
 - 🚦 **PR risk gate workflow** - Production-ready GitHub workflow + local composite action for CI adoption
 - 📄 **CI artifacts** - `--ci-summary-file` and `--policy-report` for reviewer-friendly markdown + machine-readable output
-- 📈 **Weekly analytics summary** - `safe-agent-marketing weekly-summary` for stars/traffic/click deltas
 - 🎛️ **Preset docs + guidance** - Preset quickstarts plus clearer invalid-preset feedback
 
 ## Project Map
@@ -24,7 +24,7 @@ safe-agent "add error handling to api.py" --dry-run
 - **safe-agent-cli (this repo)**: a reference coding agent that uses impact-preview for approvals.
 - **Roadmap**: staged execution plan in [`ROADMAP.md`](ROADMAP.md).
 - **Compatibility Matrix**: version contract in [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md).
-- **What's New (v0.4.1)**: release summary and launch copy in [`docs/whats-new-v0.4.1.md`](docs/whats-new-v0.4.1.md).
+- **What's New (v0.4.2)**: release summary in [`docs/whats-new-v0.4.2.md`](docs/whats-new-v0.4.2.md).
 - **Monday Packet**: current assignment bundle in [`docs/monday-assignment-packet.md`](docs/monday-assignment-packet.md).
 
 ## The Problem
@@ -298,16 +298,6 @@ Safe Agent is available as a [Moltbook](https://moltbook.com) skill for AI agent
 
 See `moltbook-skill.json` for the skill definition.
 
-## Demo Producer
-
-Set up a canned risky-edit scenario and print recording commands:
-
-```bash
-safe-agent-demo prepare  # creates a demo repo with config/db.yaml
-cd /tmp/safe-agent-demo-*  # or your chosen path
-safe-agent-demo record     # shows asciinema + GIF commands
-```
-
 ## GitHub PR Risk Gate
 
 This repo ships a production workflow and local composite action for PR gating:
@@ -319,10 +309,6 @@ The workflow runs on PRs (non-forks) and manual dispatch, then uploads:
 - `safe-agent-summary.md` (human-readable markdown summary)
 - `policy-report.json` (machine-readable report with rule IDs/outcomes)
 - `safe-agent.log` (full run log)
-
-By default the demo runs `safe-agent --dry-run "switch database config to production"` against the prepared repo.
-
-![Safe Agent demo](marketing/demo.gif)
 
 ## For AI Agents
 
@@ -373,33 +359,6 @@ AI coding agents without proper safeguards have caused real damage. We document 
 Experienced an AI agent incident? Help the community by [submitting an incident report](.github/ISSUE_TEMPLATE/incident-report.md).
 
 Browse all documented incidents in [docs/incident-reports/](docs/incident-reports/).
-
-## Marketing Helpers
-
-A lightweight CLI to generate headline variants, channel-specific copy (HN, Twitter/X, LinkedIn), and README hero blocks:
-
-```bash
-safe-agent-marketing generate --audience "Teams running AI code agents in CI" \
-  --hypothesis "Guardrail that blocks risky edits" --update-readme
-```
-
-This writes JSON/Markdown bundles to `marketing/` and (optionally) refreshes the README hero block. Queue posts with:
-
-```bash
-safe-agent-marketing queue --slot 2026-02-05T15:00:00Z --slot 2026-02-05T20:00:00Z
-```
-
-Log traction daily:
-
-```bash
-safe-agent-marketing analytics --repo agent-polis/safe-agent --log experiments/experiments.csv
-```
-
-Generate a weekly markdown rollup (stars/traffic/click deltas + variant notes):
-
-```bash
-safe-agent-marketing weekly-summary --log experiments/experiments.csv --out experiments/weekly-summary.md
-```
 
 ## License
 

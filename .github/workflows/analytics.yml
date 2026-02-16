@@ -32,8 +32,9 @@ jobs:
       - name: Run analytics
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHONPATH: src
         run: |
-          safe-agent-marketing analytics --repo agent-polis/safe-agent --log experiments/experiments.csv
+          python -m safe_agent.marketing_cli analytics --repo agent-polis/safe-agent --log experiments/experiments.csv
 
       - name: Upload analytics log
         uses: actions/upload-artifact@v4
