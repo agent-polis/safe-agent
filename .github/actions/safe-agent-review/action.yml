@@ -10,9 +10,9 @@ inputs:
     required: false
     default: "3.11"
   fail-on-risk:
-    description: "Fail threshold for risk level."
+    description: "Optional fail threshold for risk level (low|medium|high|critical)."
     required: false
-    default: "high"
+    default: ""
   dry-run:
     description: "Run safe-agent in dry-run mode."
     required: false
@@ -81,13 +81,15 @@ runs:
           safe-agent
           "${{ inputs.task }}"
           --non-interactive
-          --fail-on-risk
-          "${{ inputs.fail-on-risk }}"
           --ci-summary-file
           "${summary_path}"
           --policy-report
           "${policy_report_path}"
         )
+
+        if [ -n "${{ inputs.fail-on-risk }}" ]; then
+          cmd+=(--fail-on-risk "${{ inputs.fail-on-risk }}")
+        fi
 
         if [ "${{ inputs.dry-run }}" = "true" ]; then
           cmd+=(--dry-run)
