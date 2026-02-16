@@ -11,7 +11,7 @@ This document tracks tested compatibility between:
 |---|---|---|---|
 | 0.3.x | >=0.2.1 | Supported | Baseline support for preview + risk analysis APIs. |
 | 0.4.x | >=0.2.2 | Supported | Stage 1 governance (policy + scanner surfacing). |
-| 0.4.1 (next patch) | >=0.2.2 | In progress | Stage 2 CI adoption features (PR risk gate + CI artifacts + weekly summary). |
+| 0.4.1 | >=0.2.2 | Supported | Stage 2 CI adoption features (PR risk gate + CI artifacts + weekly summary). |
 
 ## Stage Feature Gates
 
@@ -21,9 +21,9 @@ This document tracks tested compatibility between:
 | Policy-as-code decision enforcement | 0.4.0 | 0.2.2 | Available |
 | Descriptor integrity checks (MCP/server) | N/A | 0.2.2 | Available (platform) |
 | Injection scanner risk factors | 0.4.0 | 0.2.2 | Available |
-| CI markdown summary + policy report artifacts | 0.4.1 (next patch) | 0.2.2 | Available on `master`; pending package release |
-| PR risk gate workflow (`safe-agent-pr-review.yml`) | 0.4.1 (next patch) | 0.2.2 | Available on `master`; pending package release |
-| Weekly analytics summary (`safe-agent-marketing weekly-summary`) | 0.4.1 (next patch) | N/A | Available on `master`; pending package release |
+| CI markdown summary + policy report artifacts | 0.4.1 | 0.2.2 | Available |
+| PR risk gate workflow (`safe-agent-pr-review.yml`) | 0.4.1 | 0.2.2 | Available |
+| Weekly analytics summary (`safe-agent-marketing weekly-summary`) | 0.4.1 | N/A | Available |
 
 ## Validation Checklist (Per Release)
 
