@@ -20,7 +20,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev]" build
 
       - name: Run tests
         run: pytest tests -v
+
+      - name: Validate release surface
+        run: |
+          python -m build
+          python scripts/check_release_surface.py dist

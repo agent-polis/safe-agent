@@ -13,6 +13,8 @@ Use this checklist before every Safe Agent release.
 - [ ] Test suite passes (`uv run pytest -q`).
 - [ ] CLI help reflects shipped flags.
 - [ ] Policy presets list loads successfully (`safe-agent --list-policy-presets`).
+- [ ] Public release surface check passes (no internal tooling scripts exposed):
+  - `python -m build && python scripts/check_release_surface.py dist`
 
 ## Stage 2 CI Adoption Gates
 
@@ -23,8 +25,6 @@ Use this checklist before every Safe Agent release.
   - `policy-report.json`
   - `safe-agent.log`
 - [ ] CI summary content includes rule IDs and recommended next actions.
-- [ ] Weekly summary command output is stable:
-  - `safe-agent-marketing weekly-summary --log experiments/experiments.csv`
 
 ## Publishing and Traceability
 
