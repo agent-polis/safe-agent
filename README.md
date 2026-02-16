@@ -132,6 +132,38 @@ safe-agent --list-policy-presets
 safe-agent "update auth flow" --policy-preset fintech
 ```
 
+Preset guide:
+
+| Preset | Best for | Tradeoff |
+|---|---|---|
+| `startup` | Fast-moving product teams | Balanced safety; fewer automatic blocks |
+| `fintech` | Regulated or security-sensitive repos | Slower flow due to stricter approvals |
+| `games` | Content/asset-heavy iteration | More permissive for rapid iteration |
+
+CI quickstarts (one per preset):
+
+```bash
+# Startup (balanced)
+safe-agent "scan repo for risky config edits" \
+  --dry-run --non-interactive --policy-preset startup \
+  --ci-summary-file .safe-agent-ci/startup-summary.md \
+  --policy-report .safe-agent-ci/startup-policy-report.json
+
+# Fintech (strict)
+safe-agent "scan repo for risky config edits" \
+  --dry-run --non-interactive --policy-preset fintech --fail-on-risk high \
+  --ci-summary-file .safe-agent-ci/fintech-summary.md \
+  --policy-report .safe-agent-ci/fintech-policy-report.json
+
+# Games (iterative)
+safe-agent "scan repo for risky config edits" \
+  --dry-run --non-interactive --policy-preset games \
+  --ci-summary-file .safe-agent-ci/games-summary.md \
+  --policy-report .safe-agent-ci/games-policy-report.json
+```
+
+See [docs/policy-presets.md](docs/policy-presets.md) for detailed guidance.
+
 Or load a policy file (JSON/YAML):
 
 ```bash
