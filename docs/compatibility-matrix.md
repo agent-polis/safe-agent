@@ -35,6 +35,8 @@ This document tracks tested compatibility between:
 6. Run PR risk gate workflow and verify summary/report artifacts upload.
 7. Validate weekly summary command output format remains stable.
 
+Latest smoke record: [docs/stage2-smoke-2026-02-16.md](stage2-smoke-2026-02-16.md)
+
 ## Known Caveats
 
 - `safe-agent-cli` currently requires `ANTHROPIC_API_KEY` even in `--dry-run`, because planning still calls Anthropic.
