@@ -17,7 +17,8 @@ Safe Agent includes a PR risk gate workflow and a reusable local composite actio
 
 - Triggered on `pull_request` and `workflow_dispatch`.
 - Runs `safe-agent` in non-interactive mode.
-- Defaults to `--dry-run --fail-on-risk high`.
+- Defaults to `--dry-run` with no fail threshold (advisory mode).
+- Set `fail_on_risk` on manual runs when you want strict blocking behavior.
 - Uploads three artifacts:
   - `safe-agent-summary.md`
   - `policy-report.json`

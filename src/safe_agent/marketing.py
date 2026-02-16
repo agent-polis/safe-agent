@@ -11,9 +11,8 @@ from __future__ import annotations
 
 import csv
 import json
-import os
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -431,3 +430,176 @@ def append_experiment_log(
         writer.writerow(row)
 
     return path
+
+
+def _parse_iso_timestamp(raw: str) -> datetime:
+    text = (raw or "").strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    parsed = datetime.fromisoformat(text)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _safe_int(row: dict[str, str], key: str) -> int:
+    value = row.get(key)
+    if value is None:
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _snapshot_delta(rows: list[dict[str, str]], key: str) -> int:
+    if len(rows) < 2:
+        return 0
+    return _safe_int(rows[-1], key) - _safe_int(rows[0], key)
+
+
+def _latest_value(rows: list[dict[str, str]], key: str) -> int:
+    if not rows:
+        return 0
+    return _safe_int(rows[-1], key)
+
+
+def _pick_variant_fields(fieldnames: list[str]) -> tuple[str | None, str | None, str | None]:
+    variant_key = None
+    for candidate in ("variant_id", "variant", "utm_content"):
+        if candidate in fieldnames:
+            variant_key = candidate
+            break
+
+    notes_key = None
+    for candidate in ("variant_notes", "notes", "hypothesis"):
+        if candidate in fieldnames:
+            notes_key = candidate
+            break
+
+    clicks_key = None
+    for candidate in ("variant_clicks", "clicks", "utm_clicks"):
+        if candidate in fieldnames:
+            clicks_key = candidate
+            break
+
+    return variant_key, notes_key, clicks_key
+
+
+def generate_weekly_summary(
+    *,
+    log_path: str | Path,
+    now: Optional[datetime] = None,
+) -> str:
+    """
+    Build a weekly markdown summary from experiments CSV data.
+    """
+
+    path = Path(log_path)
+    now_ts = now.astimezone(timezone.utc) if now else datetime.now(timezone.utc)
+    if not path.exists():
+        return (
+            f"# Weekly Growth Summary ({now_ts.date().isoformat()})\n\n"
+            f"No experiments log found at `{path}`.\n"
+        )
+
+    with path.open(encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+        fieldnames = list(reader.fieldnames or [])
+
+    parsed_rows: list[tuple[datetime, dict[str, str]]] = []
+    for row in rows:
+        ts_raw = row.get("timestamp", "")
+        if not ts_raw:
+            continue
+        try:
+            parsed_rows.append((_parse_iso_timestamp(ts_raw), row))
+        except ValueError:
+            continue
+
+    if not parsed_rows:
+        return (
+            f"# Weekly Growth Summary ({now_ts.date().isoformat()})\n\n"
+            f"No valid timestamped records in `{path}`.\n"
+        )
+
+    parsed_rows.sort(key=lambda item: item[0])
+    latest_ts = parsed_rows[-1][0]
+    week_start = latest_ts - timedelta(days=7)
+    prior_start = latest_ts - timedelta(days=14)
+
+    current_rows = [row for ts, row in parsed_rows if ts >= week_start]
+    prior_rows = [row for ts, row in parsed_rows if prior_start <= ts < week_start]
+
+    metrics = [
+        ("stars", "Stars"),
+        ("views_14d", "Traffic Views (14d)"),
+        ("clones_14d", "Traffic Clones (14d)"),
+        ("utm_clicks", "UTM Clicks"),
+    ]
+
+    lines: list[str] = []
+    lines.append(f"# Weekly Growth Summary ({latest_ts.date().isoformat()})")
+    lines.append("")
+    lines.append(f"- Data source: `{path}`")
+    lines.append(
+        f"- Current window: {week_start.date().isoformat()} to {latest_ts.date().isoformat()}"
+    )
+    lines.append(
+        f"- Previous window: {prior_start.date().isoformat()} to {week_start.date().isoformat()}"
+    )
+    lines.append(f"- Rows analyzed: current={len(current_rows)}, previous={len(prior_rows)}")
+    lines.append("")
+    lines.append("## Metric Deltas")
+    lines.append("| Metric | Current Delta | Previous Delta | WoW Change | Latest Value |")
+    lines.append("|---|---:|---:|---:|---:|")
+
+    for key, label in metrics:
+        current_delta = _snapshot_delta(current_rows, key)
+        previous_delta = _snapshot_delta(prior_rows, key)
+        wow_change = current_delta - previous_delta
+        latest_value = _latest_value(current_rows, key)
+        lines.append(
+            f"| {label} | {current_delta:+d} | {previous_delta:+d} | {wow_change:+d} | {latest_value} |"
+        )
+
+    lines.append("")
+    lines.append("## Top Variant Notes")
+    variant_key, notes_key, clicks_key = _pick_variant_fields(fieldnames)
+    if not variant_key or not clicks_key:
+        lines.append("- No variant tracking columns detected (expected variant_id + clicks columns).")
+    else:
+        by_variant: dict[str, list[dict[str, str]]] = {}
+        for row in current_rows:
+            variant = (row.get(variant_key) or "").strip()
+            if not variant:
+                continue
+            by_variant.setdefault(variant, []).append(row)
+
+        if not by_variant:
+            lines.append("- No variant rows present in current week window.")
+        else:
+            ranking: list[tuple[str, int, str]] = []
+            for variant, variant_rows in by_variant.items():
+                delta = _snapshot_delta(variant_rows, clicks_key)
+                note = ""
+                if notes_key:
+                    for row in reversed(variant_rows):
+                        note = (row.get(notes_key) or "").strip()
+                        if note:
+                            break
+                ranking.append((variant, delta, note))
+
+            ranking.sort(key=lambda item: item[1], reverse=True)
+            top_variant, top_delta, top_note = ranking[0]
+            lines.append(f"- Top variant: `{top_variant}` ({top_delta:+d} click delta).")
+            if top_note:
+                lines.append(f"- Top variant note: {top_note}")
+            if len(ranking) > 1:
+                lines.append("- Other variants:")
+                for variant, delta, _note in ranking[1:3]:
+                    lines.append(f"  - `{variant}` ({delta:+d} click delta)")
+
+    lines.append("")
+    return "\n".join(lines)

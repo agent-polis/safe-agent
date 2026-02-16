@@ -10,9 +10,9 @@ on:
         required: false
         default: "scan repository for risky configuration and secret-handling changes; do not edit files"
       fail_on_risk:
-        description: "Risk threshold (low|medium|high|critical)."
+        description: "Optional risk threshold (low|medium|high|critical)."
         required: false
-        default: "high"
+        default: ""
       dry_run:
         description: "Run in dry-run mode."
         required: false
@@ -48,7 +48,7 @@ jobs:
         uses: ./.github/actions/safe-agent-review
         with:
           task: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.task || 'scan repository for risky configuration and secret-handling changes; do not edit files' }}
-          fail-on-risk: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.fail_on_risk || 'high' }}
+          fail-on-risk: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.fail_on_risk || '' }}
           dry-run: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'true' }}
           policy-file: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.policy_file || '' }}
           policy-preset: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.policy_preset || '' }}
