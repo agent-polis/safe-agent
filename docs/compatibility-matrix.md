@@ -11,6 +11,7 @@ This document tracks tested compatibility between:
 |---|---|---|---|
 | 0.3.x | >=0.2.1 | Supported | Baseline support for preview + risk analysis APIs. |
 | 0.4.x | >=0.2.2 | Supported | Stage 1 governance (policy + scanner surfacing). |
+| 0.4.1 (next patch) | >=0.2.2 | In progress | Stage 2 CI adoption features (PR risk gate + CI artifacts + weekly summary). |
 
 ## Stage Feature Gates
 
@@ -20,6 +21,9 @@ This document tracks tested compatibility between:
 | Policy-as-code decision enforcement | 0.4.0 | 0.2.2 | Available |
 | Descriptor integrity checks (MCP/server) | N/A | 0.2.2 | Available (platform) |
 | Injection scanner risk factors | 0.4.0 | 0.2.2 | Available |
+| CI markdown summary + policy report artifacts | 0.4.1 (next patch) | 0.2.2 | Available on `master`; pending package release |
+| PR risk gate workflow (`safe-agent-pr-review.yml`) | 0.4.1 (next patch) | 0.2.2 | Available on `master`; pending package release |
+| Weekly analytics summary (`safe-agent-marketing weekly-summary`) | 0.4.1 (next patch) | N/A | Available on `master`; pending package release |
 
 ## Validation Checklist (Per Release)
 
@@ -28,8 +32,13 @@ This document tracks tested compatibility between:
 3. Run non-interactive mode with fail-on-risk behavior.
 4. Confirm expected risk levels and exit codes.
 5. Record results in release notes.
+6. Run PR risk gate workflow and verify summary/report artifacts upload.
+7. Validate weekly summary command output format remains stable.
 
 ## Known Caveats
 
 - `safe-agent-cli` currently requires `ANTHROPIC_API_KEY` even in `--dry-run`, because planning still calls Anthropic.
 - CI runs should use `--non-interactive` and `--fail-on-risk` for deterministic behavior.
+- PR risk gate defaults to advisory mode unless `fail_on_risk` is explicitly set.
+
+See [docs/release-go-no-go-checklist.md](release-go-no-go-checklist.md) for the release gate.
