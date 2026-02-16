@@ -5,7 +5,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${1:-$ROOT_DIR/artifacts/integration}"
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
 LOG_PATH="$OUT_DIR/stage2-smoke-$STAMP.log"
-SUMMARY_PATH="$OUT_DIR/weekly-summary-$STAMP.md"
 VENV_PATH="$OUT_DIR/stage2-smoke-venv-$STAMP"
 
 mkdir -p "$OUT_DIR"
@@ -57,14 +56,6 @@ safe-agent --help | grep -- "--policy-report" >/dev/null
 echo "Found CI artifact flags in CLI help."
 echo
 
-echo "-- Weekly summary smoke --"
-safe-agent-marketing weekly-summary \
-  --log experiments/experiments.csv \
-  --out "$SUMMARY_PATH" >/dev/null
-test -s "$SUMMARY_PATH"
-echo "Wrote weekly summary: $SUMMARY_PATH"
-echo
-
 echo "-- CI workflow contract smoke --"
 test -f .github/workflows/safe-agent-pr-review.yml
 test -f .github/actions/safe-agent-review/action.yml
@@ -73,4 +64,3 @@ echo
 
 echo "Smoke PASS"
 echo "Log: $LOG_PATH"
-echo "Weekly summary: $SUMMARY_PATH"

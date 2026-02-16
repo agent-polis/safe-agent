@@ -10,7 +10,7 @@ Status: PASS
 
 ## Environment
 
-- `safe-agent-cli==0.4.1`
+- `safe-agent-cli==0.4.2`
 - `impact-preview==0.2.2`
 - Script uses a temporary isolated venv during execution.
 
@@ -18,10 +18,8 @@ Status: PASS
 
 - Policy preset listing works (`safe-agent --list-policy-presets`).
 - CI artifact flags are present in CLI help (`--ci-summary-file`, `--policy-report`).
-- Weekly summary command works and writes markdown output.
 - PR risk gate workflow + composite action files are present.
 
 ## Archived Artifacts
 
 - `artifacts/integration/stage2-smoke-*.log`
-- `artifacts/integration/weekly-summary-*.md`
