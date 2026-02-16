@@ -17,6 +17,7 @@ from safe_agent.marketing import (
     MarketingAssets,
     append_experiment_log,
     assets_markdown,
+    generate_weekly_summary,
     generate_marketing_assets,
     queue_posts,
     update_readme_hero,
@@ -191,6 +192,30 @@ def analytics(repo: str, token: str | None, clicks_csv: str | None, log: str) ->
         sys.exit(1)
 
     console.print(f"[green]Appended metrics to {log_path}[/green]")
+
+
+@main.command("weekly-summary")
+@click.option(
+    "--log",
+    default="experiments/experiments.csv",
+    show_default=True,
+    help="Path to experiment metrics CSV.",
+)
+@click.option(
+    "--out",
+    default=None,
+    help="Optional markdown output path.",
+)
+def weekly_summary(log: str, out: str | None) -> None:
+    """Generate a weekly markdown summary from experiment metrics."""
+
+    summary = generate_weekly_summary(log_path=log)
+    console.print(summary)
+    if out:
+        out_path = Path(out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(summary + "\n", encoding="utf-8")
+        console.print(f"[green]Wrote weekly summary to {out_path}[/green]")
 
 
 if __name__ == "__main__":

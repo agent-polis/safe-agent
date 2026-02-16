@@ -361,6 +361,12 @@ Log traction daily:
 safe-agent-marketing analytics --repo agent-polis/safe-agent --log experiments/experiments.csv
 ```
 
+Generate a weekly markdown rollup (stars/traffic/click deltas + variant notes):
+
+```bash
+safe-agent-marketing weekly-summary --log experiments/experiments.csv --out experiments/weekly-summary.md
+```
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
