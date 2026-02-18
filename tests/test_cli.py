@@ -59,6 +59,7 @@ def test_adversarial_suite_runs_without_api_key() -> None:
         result = runner.invoke(main, ["--adversarial-suite", str(suite_path)])
         assert result.exit_code == 0
         assert "Safe Agent Adversarial Evaluation" in result.output
+        assert "Impact Preview" not in result.output
 
 
 def test_adversarial_suite_exits_3_when_case_fails() -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import os
 from dataclasses import dataclass
@@ -11,6 +12,7 @@ from tempfile import TemporaryDirectory
 from typing import Any
 
 from agent_polis.actions.models import RiskLevel
+from rich.console import Console
 
 from safe_agent.agent import SafeAgent
 
@@ -82,19 +84,51 @@ async def _run_case(case: dict[str, Any], *, workdir: str) -> dict[str, Any]:
         "passed": passed,
     }
 
+class _ConsoleSwap:
+    def __init__(self, *, enabled: bool) -> None:
+        self._enabled = enabled
+        self._previous: Console | None = None
 
-def run_adversarial_suite(cases: list[dict[str, Any]], *, workdir: str | None = None) -> dict[str, Any]:
+    def __enter__(self) -> None:
+        if not self._enabled:
+            return
+        import safe_agent.agent as agent_mod
+
+        self._previous = agent_mod.console
+        agent_mod.console = Console(
+            file=io.StringIO(),
+            force_terminal=False,
+            color_system=None,
+            width=120,
+        )
+
+    def __exit__(self, exc_type, exc, tb) -> None:  # type: ignore[no-untyped-def]
+        if not self._enabled:
+            return
+        import safe_agent.agent as agent_mod
+
+        if self._previous is not None:
+            agent_mod.console = self._previous
+
+
+def run_adversarial_suite(
+    cases: list[dict[str, Any]],
+    *,
+    workdir: str | None = None,
+    verbose: bool = False,
+) -> dict[str, Any]:
     """Run adversarial fixtures against SafeAgent and return a structured report."""
     previous_key = os.environ.get("ANTHROPIC_API_KEY")
     if not previous_key:
         os.environ["ANTHROPIC_API_KEY"] = "adversarial-suite-placeholder"
 
     try:
-        if workdir is not None:
-            results = [asyncio.run(_run_case(case, workdir=workdir)) for case in cases]
-        else:
-            with TemporaryDirectory(prefix="safe-agent-adversarial-") as tmp:
-                results = [asyncio.run(_run_case(case, workdir=tmp)) for case in cases]
+        with _ConsoleSwap(enabled=not verbose):
+            if workdir is not None:
+                results = [asyncio.run(_run_case(case, workdir=workdir)) for case in cases]
+            else:
+                with TemporaryDirectory(prefix="safe-agent-adversarial-") as tmp:
+                    results = [asyncio.run(_run_case(case, workdir=tmp)) for case in cases]
     finally:
         if previous_key is None:
             os.environ.pop("ANTHROPIC_API_KEY", None)
@@ -111,14 +145,19 @@ def run_adversarial_suite(cases: list[dict[str, Any]], *, workdir: str | None = 
     }
 
 
-def run_adversarial_suite_from_file(path: str | Path, *, workdir: str | None = None) -> dict[str, Any]:
+def run_adversarial_suite_from_file(
+    path: str | Path,
+    *,
+    workdir: str | None = None,
+    verbose: bool = False,
+) -> dict[str, Any]:
     """Load a JSON suite file and run the adversarial evaluation."""
     suite_path = Path(path)
     payload = json.loads(suite_path.read_text(encoding="utf-8"))
     cases = payload.get("cases", payload)
     if not isinstance(cases, list):
         raise ValueError("Adversarial suite JSON must contain a list of cases or a {'cases': [...]} object.")
-    result = run_adversarial_suite(cases, workdir=workdir)
+    result = run_adversarial_suite(cases, workdir=workdir, verbose=verbose)
     result["source"] = str(suite_path)
     return result
 

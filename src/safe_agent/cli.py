@@ -72,6 +72,11 @@ console = Console()
     default=None,
     help="Write adversarial evaluation markdown report to a file.",
 )
+@click.option(
+    "--adversarial-verbose",
+    is_flag=True,
+    help="Print full impact preview output during adversarial runs (default: quiet).",
+)
 @click.option("--model", default="claude-sonnet-4-20250514", help="Claude model to use")
 @click.option("--audit-export", type=click.Path(), help="Export audit trail to JSON file")
 @click.option("--compliance-mode", is_flag=True, help="Enable strict compliance mode (disables auto-approve)")
@@ -117,6 +122,7 @@ def main(
     adversarial_suite: str | None,
     adversarial_json_out: str | None,
     adversarial_markdown_out: str | None,
+    adversarial_verbose: bool,
     model: str,
     audit_export: str | None,
     compliance_mode: bool,
@@ -165,7 +171,11 @@ def main(
             run_adversarial_suite_from_file,
         )
 
-        result = run_adversarial_suite_from_file(adversarial_suite, workdir=os.getcwd())
+        result = run_adversarial_suite_from_file(
+            adversarial_suite,
+            workdir=os.getcwd(),
+            verbose=adversarial_verbose,
+        )
         markdown = render_adversarial_markdown(result)
         console.print(markdown)
 
