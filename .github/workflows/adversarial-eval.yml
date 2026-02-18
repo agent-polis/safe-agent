@@ -1,0 +1,57 @@
+name: Adversarial Eval
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adversarial-suite:
+    name: Adversarial Fixture Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Run adversarial suite
+        run: |
+          mkdir -p .safe-agent-ci
+          safe-agent \
+            --adversarial-suite docs/adversarial-suite-v1.json \
+            --adversarial-markdown-out .safe-agent-ci/adversarial.md \
+            --adversarial-json-out .safe-agent-ci/adversarial.json
+
+      - name: Attach adversarial summary to job output
+        if: always()
+        run: |
+          if [ -f .safe-agent-ci/adversarial.md ]; then
+            cat .safe-agent-ci/adversarial.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Safe Agent Adversarial Evaluation" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Result: ❌ FAIL" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Missing adversarial markdown artifact." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload adversarial artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safe-agent-adversarial-${{ github.run_id }}
+          path: |
+            .safe-agent-ci/adversarial.md
+            .safe-agent-ci/adversarial.json
+          if-no-files-found: warn

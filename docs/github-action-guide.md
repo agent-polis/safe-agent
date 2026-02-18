@@ -5,6 +5,7 @@ Safe Agent includes a PR risk gate workflow and a reusable local composite actio
 ## What ships
 
 - Workflow: `.github/workflows/safe-agent-pr-review.yml`
+- Workflow: `.github/workflows/adversarial-eval.yml`
 - Composite action: `.github/actions/safe-agent-review/action.yml`
 
 ## Setup
@@ -28,6 +29,14 @@ Safe Agent includes a PR risk gate workflow and a reusable local composite actio
 - Seeds fallback summary/scorecard/report files, so failed runs still upload debuggable artifacts.
 
 Fork PRs are skipped because GitHub does not expose secrets to untrusted forks.
+
+## Adversarial fixture workflow
+
+- `adversarial-eval.yml` runs a deterministic fixture suite from `docs/adversarial-suite-v1.json`.
+- No model API key is required; it validates governance decisions against expected outcomes.
+- Uploads:
+  - `.safe-agent-ci/adversarial.md`
+  - `.safe-agent-ci/adversarial.json`
 
 ## Manual run
 

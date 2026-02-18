@@ -18,7 +18,7 @@ Status: PASS
 
 - Policy preset listing works (`safe-agent --list-policy-presets`).
 - CI artifact flags are present in CLI help (`--ci-summary-file`, `--safety-scorecard-file`, `--policy-report`).
-- PR risk gate workflow + composite action files are present.
+- PR risk gate + adversarial workflow files are present, plus the composite action.
 
 ## Archived Artifacts
 
