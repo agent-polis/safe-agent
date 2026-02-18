@@ -11,7 +11,7 @@ This document tracks tested compatibility between:
 |---|---|---|---|
 | 0.3.x | >=0.2.1 | Supported | Baseline support for preview + risk analysis APIs. |
 | 0.4.x | >=0.2.2 | Supported | Stage 1 governance (policy + scanner surfacing). |
-| 0.4.2 | >=0.2.2 | Supported | Stage 2 CI adoption features (PR risk gate + CI artifacts) plus release-surface hardening. |
+| 0.4.3 | >=0.2.2 | Supported | Stage 3 trust signals (adversarial eval + scorecard) plus hardened CI gates. |
 
 ## Stage Feature Gates
 
@@ -33,7 +33,7 @@ This document tracks tested compatibility between:
 5. Record results in release notes.
 6. Run PR risk gate workflow and verify summary/report artifacts upload.
 
-Latest smoke record: [docs/stage2-smoke-2026-02-16.md](stage2-smoke-2026-02-16.md)
+Latest smoke record: [docs/stage2-smoke-2026-02-18.md](stage2-smoke-2026-02-18.md)
 
 ## Known Caveats
 
