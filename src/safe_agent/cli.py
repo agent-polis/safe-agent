@@ -17,12 +17,14 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 
+from safe_agent import __version__
 from safe_agent.agent import SafeAgent
 
 console = Console()
 
 
 @click.command()
+@click.version_option(version=__version__, prog_name="safe-agent")
 @click.argument("task", required=False)
 @click.option("--file", "-f", type=click.Path(exists=True), help="Read task from file")
 @click.option("--interactive", "-i", is_flag=True, help="Interactive mode")
@@ -72,6 +74,17 @@ console = Console()
     default=None,
     help="Write machine-readable policy/scanner report JSON.",
 )
+@click.option(
+    "--safety-scorecard",
+    is_flag=True,
+    help="Print a markdown safety scorecard block.",
+)
+@click.option(
+    "--safety-scorecard-file",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Write markdown safety scorecard to a file.",
+)
 def main(
     task: str | None,
     file: str | None,
@@ -89,6 +102,8 @@ def main(
     ci_summary: bool,
     ci_summary_file: str | None,
     policy_report: str | None,
+    safety_scorecard: bool,
+    safety_scorecard_file: str | None,
 ):
     """
     Safe Agent - An AI coding agent you can actually trust.
@@ -209,6 +224,17 @@ def main(
             report_path.parent.mkdir(parents=True, exist_ok=True)
             report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             console.print(f"[dim]Policy report written to: {report_path}[/dim]")
+
+        if safety_scorecard or safety_scorecard_file:
+            scorecard = agent.build_safety_scorecard()
+            if safety_scorecard:
+                console.print()
+                console.print(scorecard)
+            if safety_scorecard_file:
+                scorecard_path = Path(safety_scorecard_file)
+                scorecard_path.parent.mkdir(parents=True, exist_ok=True)
+                scorecard_path.write_text(scorecard + "\n", encoding="utf-8")
+                console.print(f"[dim]Safety scorecard written to: {scorecard_path}[/dim]")
 
         if not result.get("success", False):
             sys.exit(2)

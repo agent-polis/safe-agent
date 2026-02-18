@@ -5,6 +5,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from safe_agent import __version__
 from safe_agent.cli import main
 
 runner = CliRunner()
@@ -16,6 +17,14 @@ def test_safe_agent_help() -> None:
     assert result.exit_code == 0
     assert "Safe Agent" in result.output or "safe-agent" in result.output.lower()
     assert "dry-run" in result.output or "dry_run" in result.output
+
+
+def test_safe_agent_version_option() -> None:
+    """CLI responds to --version with package version."""
+    result = runner.invoke(main, ["--version"])
+    assert result.exit_code == 0
+    assert "safe-agent" in result.output.lower()
+    assert __version__ in result.output
 
 
 def test_safe_agent_requires_task_without_args() -> None:
@@ -47,11 +56,15 @@ def test_ci_summary_and_policy_report_files_are_written(monkeypatch) -> None:
         def build_policy_report(self) -> dict:
             return {"status": "passed", "events": []}
 
+        def build_safety_scorecard(self) -> str:
+            return "### Safe Agent Safety Scorecard\n- Result: ✅ PASS\n"
+
     monkeypatch.setattr("safe_agent.cli.SafeAgent", DummyAgent)
 
     with runner.isolated_filesystem():
         summary_path = Path("out/summary.md")
         report_path = Path("out/policy.json")
+        scorecard_path = Path("out/scorecard.md")
 
         result = runner.invoke(
             main,
@@ -63,6 +76,8 @@ def test_ci_summary_and_policy_report_files_are_written(monkeypatch) -> None:
                 str(summary_path),
                 "--policy-report",
                 str(report_path),
+                "--safety-scorecard-file",
+                str(scorecard_path),
             ],
             env={"ANTHROPIC_API_KEY": "test-key"},
         )
@@ -73,6 +88,8 @@ def test_ci_summary_and_policy_report_files_are_written(monkeypatch) -> None:
         assert report_path.exists()
         report = json.loads(report_path.read_text(encoding="utf-8"))
         assert report["status"] == "passed"
+        assert scorecard_path.exists()
+        assert "Safety Scorecard" in scorecard_path.read_text(encoding="utf-8")
 
 
 def test_invalid_policy_preset_shows_guidance(monkeypatch) -> None:
@@ -139,10 +156,14 @@ def test_policy_report_written_even_when_run_fails(monkeypatch) -> None:
         def build_policy_report(self) -> dict:
             return {"status": "failed", "events": [{"outcome": "blocked_by_fail_on_risk"}]}
 
+        def build_safety_scorecard(self) -> str:
+            return "### Safe Agent Safety Scorecard\n- Result: ❌ FAIL\n"
+
     monkeypatch.setattr("safe_agent.cli.SafeAgent", FailingAgent)
 
     with runner.isolated_filesystem():
         report_path = Path("out/policy.json")
+        scorecard_path = Path("out/scorecard.md")
         result = runner.invoke(
             main,
             [
@@ -151,6 +172,8 @@ def test_policy_report_written_even_when_run_fails(monkeypatch) -> None:
                 "--dry-run",
                 "--policy-report",
                 str(report_path),
+                "--safety-scorecard-file",
+                str(scorecard_path),
             ],
             env={"ANTHROPIC_API_KEY": "test-key"},
         )
@@ -158,3 +181,5 @@ def test_policy_report_written_even_when_run_fails(monkeypatch) -> None:
         assert report_path.exists()
         report = json.loads(report_path.read_text(encoding="utf-8"))
         assert report["status"] == "failed"
+        assert scorecard_path.exists()
+        assert "❌ FAIL" in scorecard_path.read_text(encoding="utf-8")

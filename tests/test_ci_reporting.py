@@ -51,3 +51,39 @@ def test_policy_report_contains_expected_fields(safe_agent: SafeAgent) -> None:
     assert report["blocking_rule_ids"] == []
     assert isinstance(report["recommended_next_actions"], list)
     assert report["events"][0]["path"] == "foo.py"
+
+
+def test_safety_scorecard_contains_metrics_and_risk_breakdown(safe_agent: SafeAgent) -> None:
+    safe_agent.max_risk_level_seen = RiskLevel.HIGH
+    safe_agent.changes_made = [{"action": "modify", "path": "foo.py"}]
+    safe_agent.changes_rejected = [{"action": "modify", "path": ".env"}]
+    safe_agent._record_governance_event(
+        path="foo.py",
+        action="modify",
+        risk_level=RiskLevel.MEDIUM,
+        policy_decision="allow",
+        matched_rule_id=None,
+        scanner_severity="none",
+        scanner_reason_ids=[],
+        outcome="approved_non_interactive",
+    )
+    safe_agent._record_governance_event(
+        path=".env",
+        action="modify",
+        risk_level=RiskLevel.HIGH,
+        policy_decision="deny",
+        matched_rule_id="deny-secrets",
+        scanner_severity="medium",
+        scanner_reason_ids=["prompt_injection"],
+        outcome="blocked_by_policy_deny",
+    )
+    safe_agent.governance_policy_failed = True
+
+    scorecard = safe_agent.build_safety_scorecard()
+
+    assert "Safe Agent Safety Scorecard" in scorecard
+    assert "❌ FAIL" in scorecard
+    assert "| Planned changes | 2 |" in scorecard
+    assert "| Blocked by policy deny | 1 |" in scorecard
+    assert "| HIGH | 1 |" in scorecard
+    assert "`prompt_injection`" in scorecard

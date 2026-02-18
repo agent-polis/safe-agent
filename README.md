@@ -15,7 +15,7 @@ safe-agent "add error handling to api.py" --dry-run
 
 - 🔒 **Release surface hardening** - Public package now ships only `safe-agent` and `safe-agent-mcp` entry points
 - 🚦 **PR risk gate workflow** - Production-ready GitHub workflow + local composite action for CI adoption
-- 📄 **CI artifacts** - `--ci-summary-file` and `--policy-report` for reviewer-friendly markdown + machine-readable output
+- 📄 **CI artifacts** - `--ci-summary-file`, `--safety-scorecard-file`, and `--policy-report` for reviewer/trust reporting
 - 🎛️ **Preset docs + guidance** - Preset quickstarts plus clearer invalid-preset feedback
 
 ## Project Map
@@ -109,7 +109,7 @@ approval). Combine with `--fail-on-risk` to fail the process if risky changes ar
 safe-agent "scan repository for risky config changes" --dry-run --non-interactive --fail-on-risk high
 ```
 
-For CI artifacts, also emit a markdown summary and machine-readable report:
+For CI artifacts, emit a markdown summary, safety scorecard, and machine-readable report:
 
 ```bash
 safe-agent "scan repository for risky config changes" \
@@ -117,6 +117,7 @@ safe-agent "scan repository for risky config changes" \
   --non-interactive \
   --fail-on-risk high \
   --ci-summary-file .safe-agent-ci/summary.md \
+  --safety-scorecard-file .safe-agent-ci/safety-scorecard.md \
   --policy-report .safe-agent-ci/policy-report.json
 ```
 
@@ -149,18 +150,21 @@ CI quickstarts (one per preset):
 safe-agent "scan repo for risky config edits" \
   --dry-run --non-interactive --policy-preset startup \
   --ci-summary-file .safe-agent-ci/startup-summary.md \
+  --safety-scorecard-file .safe-agent-ci/startup-safety-scorecard.md \
   --policy-report .safe-agent-ci/startup-policy-report.json
 
 # Fintech (strict)
 safe-agent "scan repo for risky config edits" \
   --dry-run --non-interactive --policy-preset fintech --fail-on-risk high \
   --ci-summary-file .safe-agent-ci/fintech-summary.md \
+  --safety-scorecard-file .safe-agent-ci/fintech-safety-scorecard.md \
   --policy-report .safe-agent-ci/fintech-policy-report.json
 
 # Games (iterative)
 safe-agent "scan repo for risky config edits" \
   --dry-run --non-interactive --policy-preset games \
   --ci-summary-file .safe-agent-ci/games-summary.md \
+  --safety-scorecard-file .safe-agent-ci/games-safety-scorecard.md \
   --policy-report .safe-agent-ci/games-policy-report.json
 ```
 
@@ -254,11 +258,14 @@ We maintain a comprehensive database of AI agent incidents to raise awareness an
 | `--list-policy-presets` | List available policy presets and exit |
 | `--interactive`, `-i` | Interactive mode |
 | `--file`, `-f` | Read task from file |
+| `--version` | Print installed safe-agent version and exit |
 | `--model` | Claude model to use (default: claude-sonnet-4-20250514) |
 | `--audit-export` | Export audit trail to JSON file (insurance/compliance) |
 | `--compliance-mode` | Enable strict compliance mode (disables auto-approve) |
 | `--ci-summary` | Print a concise markdown CI summary block |
 | `--ci-summary-file` | Write CI summary markdown to a file |
+| `--safety-scorecard` | Print a markdown safety scorecard block |
+| `--safety-scorecard-file` | Write markdown safety scorecard to a file |
 | `--policy-report` | Write machine-readable policy/scanner report JSON |
 
 ## MCP Server (For Other AI Agents)
@@ -307,6 +314,7 @@ This repo ships a production workflow and local composite action for PR gating:
 
 The workflow runs on PRs (non-forks) and manual dispatch, then uploads:
 - `safe-agent-summary.md` (human-readable markdown summary)
+- `safety-scorecard.md` (risk/policy/scanner metrics for trust reviews)
 - `policy-report.json` (machine-readable report with rule IDs/outcomes)
 - `safe-agent.log` (full run log)
 
