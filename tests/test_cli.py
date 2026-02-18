@@ -5,6 +5,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from safe_agent import __version__
 from safe_agent.cli import main
 
 runner = CliRunner()
@@ -16,6 +17,14 @@ def test_safe_agent_help() -> None:
     assert result.exit_code == 0
     assert "Safe Agent" in result.output or "safe-agent" in result.output.lower()
     assert "dry-run" in result.output or "dry_run" in result.output
+
+
+def test_safe_agent_version_option() -> None:
+    """CLI responds to --version with package version."""
+    result = runner.invoke(main, ["--version"])
+    assert result.exit_code == 0
+    assert "safe-agent" in result.output.lower()
+    assert __version__ in result.output
 
 
 def test_safe_agent_requires_task_without_args() -> None:

@@ -17,12 +17,14 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 
+from safe_agent import __version__
 from safe_agent.agent import SafeAgent
 
 console = Console()
 
 
 @click.command()
+@click.version_option(version=__version__, prog_name="safe-agent")
 @click.argument("task", required=False)
 @click.option("--file", "-f", type=click.Path(exists=True), help="Read task from file")
 @click.option("--interactive", "-i", is_flag=True, help="Interactive mode")

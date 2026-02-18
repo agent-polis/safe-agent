@@ -258,6 +258,7 @@ We maintain a comprehensive database of AI agent incidents to raise awareness an
 | `--list-policy-presets` | List available policy presets and exit |
 | `--interactive`, `-i` | Interactive mode |
 | `--file`, `-f` | Read task from file |
+| `--version` | Print installed safe-agent version and exit |
 | `--model` | Claude model to use (default: claude-sonnet-4-20250514) |
 | `--audit-export` | Export audit trail to JSON file (insurance/compliance) |
 | `--compliance-mode` | Enable strict compliance mode (disables auto-approve) |
