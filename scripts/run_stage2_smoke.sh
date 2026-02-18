@@ -52,6 +52,7 @@ echo
 
 echo "-- CI option contract smoke --"
 safe-agent --help | grep -- "--ci-summary-file" >/dev/null
+safe-agent --help | grep -- "--safety-scorecard-file" >/dev/null
 safe-agent --help | grep -- "--policy-report" >/dev/null
 echo "Found CI artifact flags in CLI help."
 echo

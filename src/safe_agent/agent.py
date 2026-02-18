@@ -5,6 +5,7 @@ Safe Agent - Core agent logic with impact preview integration.
 from __future__ import annotations
 
 import os
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -378,6 +379,77 @@ class SafeAgent:
             "recommended_next_actions": self._recommended_next_actions(),
             "events": self._governance_events,
         }
+
+    def build_safety_scorecard(self) -> str:
+        """Build a markdown safety scorecard suitable for release/PR artifacts."""
+        import datetime
+
+        status = "FAIL" if (self.risk_policy_failed or self.governance_policy_failed) else "PASS"
+        status_icon = "❌" if status == "FAIL" else "✅"
+        max_risk = self.max_risk_level_seen.value.upper() if self.max_risk_level_seen else "NONE"
+
+        outcome_counts = Counter(event.get("outcome", "unknown") for event in self._governance_events)
+        risk_counts = Counter(
+            str(event["risk_level"]).upper()
+            for event in self._governance_events
+            if event.get("risk_level") is not None
+        )
+        scanner_reason_ids = sorted(
+            {
+                reason
+                for event in self._governance_events
+                for reason in event.get("scanner_reason_ids", [])
+            }
+        )
+        generated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        lines = [
+            "### Safe Agent Safety Scorecard",
+            f"- Generated at (UTC): {generated_at}",
+            f"- Result: {status_icon} {status}",
+            f"- Policy source: `{self._policy_source}`",
+            f"- Max risk seen: {max_risk}",
+            "",
+            "| Metric | Value |",
+            "| --- | --- |",
+            f"| Planned changes | {len(self._governance_events)} |",
+            f"| Applied changes | {len(self.changes_made)} |",
+            f"| Skipped/rejected changes | {len(self.changes_rejected)} |",
+            f"| Blocked by policy deny | {outcome_counts.get('blocked_by_policy_deny', 0)} |",
+            f"| Blocked by fail-on-risk | {outcome_counts.get('blocked_by_fail_on_risk', 0)} |",
+            (
+                "| Blocked (non-interactive approval required) | "
+                f"{outcome_counts.get('blocked_non_interactive_requires_approval', 0)} |"
+            ),
+            f"| Dry-run skips | {outcome_counts.get('blocked_dry_run', 0)} |",
+            f"| Scanner reason IDs (unique) | {len(scanner_reason_ids)} |",
+        ]
+
+        if risk_counts:
+            lines.extend(
+                [
+                    "",
+                    "| Risk level | Count |",
+                    "| --- | --- |",
+                ]
+            )
+            for level in ("LOW", "MEDIUM", "HIGH", "CRITICAL"):
+                lines.append(f"| {level} | {risk_counts.get(level, 0)} |")
+
+        if scanner_reason_ids:
+            lines.append("")
+            lines.append(
+                "- Scanner reason IDs: " + ", ".join(f"`{reason}`" for reason in scanner_reason_ids)
+            )
+        else:
+            lines.append("")
+            lines.append("- Scanner reason IDs: none")
+
+        lines.append("- Recommended next actions:")
+        for action in self._recommended_next_actions():
+            lines.append(f"  - {action}")
+
+        return "\n".join(lines)
     
     async def run(self, task: str) -> dict[str, Any]:
         """
@@ -630,7 +702,7 @@ Rules:
             f"**Policy:** {getattr(policy_decision, 'value', str(policy_decision)).upper()}"
             f"{policy_rule_suffix} [{self._policy_source}]\n"
             f"**Scanner:** {scan_max_str}{scan_reason_suffix}",
-            title=f"Impact Preview",
+            title="Impact Preview",
             border_style="yellow" if preview.risk_level in [RiskLevel.HIGH, RiskLevel.CRITICAL] else "blue",
         ))
         

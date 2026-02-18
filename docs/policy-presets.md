@@ -26,6 +26,7 @@ safe-agent "scan repo for risky config edits" \
   --non-interactive \
   --policy-preset startup \
   --ci-summary-file .safe-agent-ci/startup-summary.md \
+  --safety-scorecard-file .safe-agent-ci/startup-safety-scorecard.md \
   --policy-report .safe-agent-ci/startup-policy-report.json
 ```
 
@@ -38,6 +39,7 @@ safe-agent "scan repo for risky config edits" \
   --policy-preset fintech \
   --fail-on-risk high \
   --ci-summary-file .safe-agent-ci/fintech-summary.md \
+  --safety-scorecard-file .safe-agent-ci/fintech-safety-scorecard.md \
   --policy-report .safe-agent-ci/fintech-policy-report.json
 ```
 
@@ -49,6 +51,7 @@ safe-agent "scan repo for risky config edits" \
   --non-interactive \
   --policy-preset games \
   --ci-summary-file .safe-agent-ci/games-summary.md \
+  --safety-scorecard-file .safe-agent-ci/games-safety-scorecard.md \
   --policy-report .safe-agent-ci/games-policy-report.json
 ```
 

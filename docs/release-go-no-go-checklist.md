@@ -22,6 +22,7 @@ Use this checklist before every Safe Agent release.
   - `.github/workflows/safe-agent-pr-review.yml`
 - [ ] Workflow artifacts are present:
   - `safe-agent-summary.md`
+  - `safety-scorecard.md`
   - `policy-report.json`
   - `safe-agent.log`
 - [ ] CI summary content includes rule IDs and recommended next actions.
