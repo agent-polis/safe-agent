@@ -11,11 +11,11 @@ safe-agent "add error handling to api.py" --dry-run
 ```
 <!-- HERO_END -->
 
-### ✨ New in v0.4.2
+### ✨ New in v0.4.3
 
-- 🔒 **Release surface hardening** - Public package now ships only `safe-agent` and `safe-agent-mcp` entry points
-- 🚦 **PR risk gate workflow** - Production-ready GitHub workflow + local composite action for CI adoption
-- 📄 **CI artifacts** - `--ci-summary-file`, `--safety-scorecard-file`, and `--policy-report` for reviewer/trust reporting
+- 🧪 **Deterministic adversarial eval** - Run `--adversarial-suite` in CI (no API key) for a reproducible trust signal
+- 📊 **Safety scorecard artifact** - `--safety-scorecard-file` captures risk/policy/scanner metrics for reviews
+- 🧱 **Hardened CI gate** - composite action uses `pipefail` + fallback artifacts to avoid false-green gates
 - 🎛️ **Preset docs + guidance** - Preset quickstarts plus clearer invalid-preset feedback
 
 ## Project Map
@@ -24,7 +24,7 @@ safe-agent "add error handling to api.py" --dry-run
 - **safe-agent-cli (this repo)**: a reference coding agent that uses impact-preview for approvals.
 - **Roadmap**: staged execution plan in [`ROADMAP.md`](ROADMAP.md).
 - **Compatibility Matrix**: version contract in [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md).
-- **What's New (v0.4.2)**: release summary in [`docs/whats-new-v0.4.2.md`](docs/whats-new-v0.4.2.md).
+- **What's New (v0.4.3)**: release summary in [`docs/whats-new-v0.4.3.md`](docs/whats-new-v0.4.3.md).
 - **Monday Packet**: current assignment bundle in [`docs/monday-assignment-packet.md`](docs/monday-assignment-packet.md).
 
 ## The Problem

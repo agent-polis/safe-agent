@@ -179,7 +179,7 @@ safe-agent "task" --audit-export audit-$(date +%Y%m%d).json
   "audit_metadata": {
     "export_version": "1.0",
     "export_timestamp": "2026-02-11T14:23:45Z",
-    "agent_version": "safe-agent 0.4.2"
+    "agent_version": "safe-agent 0.4.3"
   },
   "task": {
     "task_description": "Update production config",
@@ -489,7 +489,7 @@ AI System Details:
 - Risk Mitigation: Human oversight, audit trails, risk assessment
 
 Technical Specifications:
-- Version: safe-agent 0.4.2
+- Version: safe-agent 0.4.3
 - Deployment Date: [Date]
 - Human Oversight: Approval workflow (Article 14)
 - Record Keeping: Audit export JSON (Article 12)
@@ -570,7 +570,7 @@ Applies to all AI coding agent operations affecting:
 
 **AI System Used**:
 - Base AI: Claude Sonnet 4 (Anthropic)
-- Safety Layer: Safe Agent 0.4.2 (agent-polis/safe-agent)
+- Safety Layer: Safe Agent 0.4.3 (agent-polis/safe-agent)
 
 **Classification**: [Your risk assessment]
 
