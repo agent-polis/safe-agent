@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 
 ALLOWED_CONSOLE_SCRIPTS = {"safe-agent", "safe-agent-mcp"}
-ALLOWED_PUBLIC_MODULES = {"__init__.py", "agent.py", "cli.py", "mcp_server.py"}
+ALLOWED_PUBLIC_MODULES = {"__init__.py", "adversarial.py", "agent.py", "cli.py", "mcp_server.py"}
 DISALLOWED_SOURCE_TOKENS = ("marketing", "demo", "copy", "devtool", "internal")
 DISALLOWED_SDIST_DIRS = ("marketing/", "experiments/")
 
