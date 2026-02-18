@@ -75,11 +75,31 @@ runs:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
       run: |
         set +e
+        set -o pipefail
         mkdir -p "${{ inputs.artifact-dir }}"
         summary_path="${{ inputs.artifact-dir }}/safe-agent-summary.md"
         safety_scorecard_path="${{ inputs.artifact-dir }}/safety-scorecard.md"
         policy_report_path="${{ inputs.artifact-dir }}/policy-report.json"
         log_path="${{ inputs.artifact-dir }}/safe-agent.log"
+
+        # Seed fallback artifacts so failed runs still upload actionable context.
+        cat > "${summary_path}" <<'EOF'
+        ### Safe Agent CI Summary
+        - Result: ❌ FAIL
+        - Reason: safe-agent exited before writing summary output.
+        EOF
+        cat > "${safety_scorecard_path}" <<'EOF'
+        ### Safe Agent Safety Scorecard
+        - Result: ❌ FAIL
+        - Reason: safe-agent exited before writing scorecard output.
+        EOF
+        cat > "${policy_report_path}" <<'EOF'
+        {
+          "status": "failed",
+          "error": "safe-agent exited before writing policy report output.",
+          "events": []
+        }
+        EOF
 
         cmd=(
           safe-agent
@@ -108,7 +128,7 @@ runs:
         fi
 
         "${cmd[@]}" 2>&1 | tee "${log_path}"
-        exit_code=$?
+        exit_code=${PIPESTATUS[0]}
 
         echo "summary_path=${summary_path}" >> "$GITHUB_OUTPUT"
         echo "safety_scorecard_path=${safety_scorecard_path}" >> "$GITHUB_OUTPUT"
