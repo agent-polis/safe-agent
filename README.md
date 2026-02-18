@@ -121,6 +121,17 @@ safe-agent "scan repository for risky config changes" \
   --policy-report .safe-agent-ci/policy-report.json
 ```
 
+### Adversarial Evaluation (Stage 3 trust signal)
+
+Run the built-in adversarial fixture suite and emit markdown/JSON reports:
+
+```bash
+safe-agent \
+  --adversarial-suite docs/adversarial-suite-v1.json \
+  --adversarial-markdown-out .safe-agent-ci/adversarial.md \
+  --adversarial-json-out .safe-agent-ci/adversarial.json
+```
+
 ### Policy (allow/deny/require approval)
 
 By default Safe Agent enforces a built-in policy that:
@@ -256,6 +267,9 @@ We maintain a comprehensive database of AI agent incidents to raise awareness an
 | `--policy` | Path to a policy file (JSON/YAML) for deterministic allow/deny/approval |
 | `--policy-preset` | Use a bundled policy preset (startup, fintech, games) |
 | `--list-policy-presets` | List available policy presets and exit |
+| `--adversarial-suite` | Run adversarial fixture suite from JSON and exit |
+| `--adversarial-json-out` | Write adversarial evaluation JSON report |
+| `--adversarial-markdown-out` | Write adversarial evaluation markdown report |
 | `--interactive`, `-i` | Interactive mode |
 | `--file`, `-f` | Read task from file |
 | `--version` | Print installed safe-agent version and exit |

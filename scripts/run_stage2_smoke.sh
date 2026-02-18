@@ -59,6 +59,7 @@ echo
 
 echo "-- CI workflow contract smoke --"
 test -f .github/workflows/safe-agent-pr-review.yml
+test -f .github/workflows/adversarial-eval.yml
 test -f .github/actions/safe-agent-review/action.yml
 grep -- "set -o pipefail" .github/actions/safe-agent-review/action.yml >/dev/null
 grep -- "safety-scorecard.md" .github/actions/safe-agent-review/action.yml >/dev/null

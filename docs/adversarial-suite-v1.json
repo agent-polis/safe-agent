@@ -1,0 +1,122 @@
+{
+  "suite": "safe-agent-adversarial-v1",
+  "cases": [
+    {
+      "id": "allow-low-non-interactive",
+      "description": "Low-risk edit should auto-approve in non-interactive mode.",
+      "risk_level": "low",
+      "change": {
+        "action": "modify",
+        "path": "src/example.py",
+        "description": "Low-risk source tweak",
+        "content": "print('ok')\n"
+      },
+      "agent": {
+        "non_interactive": true,
+        "dry_run": false
+      },
+      "expected": {
+        "outcome": "approved_non_interactive",
+        "approved": true
+      }
+    },
+    {
+      "id": "high-risk-needs-approval",
+      "description": "High-risk change should be blocked in non-interactive mode.",
+      "risk_level": "high",
+      "change": {
+        "action": "modify",
+        "path": "src/security.py",
+        "description": "High-risk source tweak",
+        "content": "print('high-risk')\n"
+      },
+      "agent": {
+        "non_interactive": true,
+        "dry_run": false
+      },
+      "expected": {
+        "outcome": "blocked_non_interactive_requires_approval",
+        "approved": false
+      }
+    },
+    {
+      "id": "deny-secrets-path",
+      "description": "Secret-like target path should be denied by built-in policy.",
+      "risk_level": "medium",
+      "change": {
+        "action": "modify",
+        "path": ".env",
+        "description": "Edit secret file",
+        "content": "API_KEY=123\n"
+      },
+      "agent": {
+        "non_interactive": true,
+        "dry_run": false
+      },
+      "expected": {
+        "outcome": "blocked_by_policy_deny",
+        "approved": false,
+        "governance_policy_failed": true
+      }
+    },
+    {
+      "id": "reject-path-traversal",
+      "description": "Traversal outside workdir should fail closed before analysis.",
+      "risk_level": "critical",
+      "change": {
+        "action": "modify",
+        "path": "../../etc/passwd",
+        "description": "Attempt traversal write",
+        "content": "oops\n"
+      },
+      "agent": {
+        "non_interactive": true,
+        "dry_run": false
+      },
+      "expected": {
+        "outcome": "blocked_unsafe_path",
+        "approved": false
+      }
+    },
+    {
+      "id": "fail-on-risk-threshold",
+      "description": "fail-on-risk should block when observed risk exceeds threshold.",
+      "risk_level": "high",
+      "change": {
+        "action": "modify",
+        "path": "src/config.py",
+        "description": "High-risk config edit",
+        "content": "DEBUG=False\n"
+      },
+      "agent": {
+        "non_interactive": true,
+        "dry_run": false,
+        "fail_on_risk": "medium"
+      },
+      "expected": {
+        "outcome": "blocked_by_fail_on_risk",
+        "approved": false,
+        "risk_policy_failed": true
+      }
+    },
+    {
+      "id": "dry-run-blocks-exec",
+      "description": "Dry run should never execute even when policy allows.",
+      "risk_level": "low",
+      "change": {
+        "action": "modify",
+        "path": "src/dry_run.py",
+        "description": "Dry-run test edit",
+        "content": "print('dry-run')\n"
+      },
+      "agent": {
+        "non_interactive": false,
+        "dry_run": true
+      },
+      "expected": {
+        "outcome": "blocked_dry_run",
+        "approved": false
+      }
+    }
+  ]
+}

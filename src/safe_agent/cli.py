@@ -54,6 +54,24 @@ console = Console()
     is_flag=True,
     help="List available policy presets and exit.",
 )
+@click.option(
+    "--adversarial-suite",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help="Run adversarial evaluation from a suite JSON file and exit.",
+)
+@click.option(
+    "--adversarial-json-out",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Write adversarial evaluation JSON report to a file.",
+)
+@click.option(
+    "--adversarial-markdown-out",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Write adversarial evaluation markdown report to a file.",
+)
 @click.option("--model", default="claude-sonnet-4-20250514", help="Claude model to use")
 @click.option("--audit-export", type=click.Path(), help="Export audit trail to JSON file")
 @click.option("--compliance-mode", is_flag=True, help="Enable strict compliance mode (disables auto-approve)")
@@ -96,6 +114,9 @@ def main(
     policy: str | None,
     policy_preset: str | None,
     list_policy_presets: bool,
+    adversarial_suite: str | None,
+    adversarial_json_out: str | None,
+    adversarial_markdown_out: str | None,
     model: str,
     audit_export: str | None,
     compliance_mode: bool,
@@ -136,6 +157,31 @@ def main(
         console.print("Available policy presets:")
         for preset in presets:
             console.print(f"- {preset.id}: {preset.name} — {preset.description}")
+        sys.exit(0)
+
+    if adversarial_suite:
+        from safe_agent.adversarial import (
+            render_adversarial_markdown,
+            run_adversarial_suite_from_file,
+        )
+
+        result = run_adversarial_suite_from_file(adversarial_suite, workdir=os.getcwd())
+        markdown = render_adversarial_markdown(result)
+        console.print(markdown)
+
+        if adversarial_json_out:
+            json_path = Path(adversarial_json_out)
+            json_path.parent.mkdir(parents=True, exist_ok=True)
+            json_path.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            console.print(f"[dim]Adversarial JSON report written to: {json_path}[/dim]")
+        if adversarial_markdown_out:
+            md_path = Path(adversarial_markdown_out)
+            md_path.parent.mkdir(parents=True, exist_ok=True)
+            md_path.write_text(markdown + "\n", encoding="utf-8")
+            console.print(f"[dim]Adversarial markdown report written to: {md_path}[/dim]")
+
+        if not result.get("all_passed", False):
+            sys.exit(3)
         sys.exit(0)
 
     # Check for API key
