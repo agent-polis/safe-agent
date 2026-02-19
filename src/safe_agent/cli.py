@@ -23,6 +23,33 @@ from safe_agent.agent import SafeAgent
 console = Console()
 
 
+def _write_json_artifact(path: str, payload: dict) -> Path:
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return output_path
+
+
+def _build_machine_output(agent: SafeAgent, result: dict) -> dict:
+    if hasattr(agent, "build_machine_report"):
+        report = agent.build_machine_report(run_success=bool(result.get("success", False)))  # type: ignore[attr-defined]
+        if isinstance(report, dict):
+            return report
+
+    # Compatibility fallback for tests/mocks that don't implement build_machine_report.
+    policy_report = {}
+    if hasattr(agent, "build_policy_report"):
+        candidate = agent.build_policy_report()  # type: ignore[attr-defined]
+        if isinstance(candidate, dict):
+            policy_report = candidate
+    return {
+        "schema_version": "1",
+        "run_status": "passed" if result.get("success", False) else "failed",
+        "success": bool(result.get("success", False)),
+        "policy_report": policy_report,
+    }
+
+
 @click.command()
 @click.version_option(version=__version__, prog_name="safe-agent")
 @click.argument("task", required=False)
@@ -108,6 +135,12 @@ console = Console()
     default=None,
     help="Write markdown safety scorecard to a file.",
 )
+@click.option(
+    "--json-out",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Write machine-readable run result JSON.",
+)
 def main(
     task: str | None,
     file: str | None,
@@ -131,6 +164,7 @@ def main(
     policy_report: str | None,
     safety_scorecard: bool,
     safety_scorecard_file: str | None,
+    json_out: str | None,
 ):
     """
     Safe Agent - An AI coding agent you can actually trust.
@@ -260,6 +294,20 @@ def main(
         if policy_preset:
             console.print("Use [bold]safe-agent --list-policy-presets[/bold] to see valid preset IDs.")
         sys.exit(1)
+    except RuntimeError as exc:
+        if json_out:
+            output_path = _write_json_artifact(
+                json_out,
+                {
+                    "schema_version": "1",
+                    "run_status": "error",
+                    "success": False,
+                    "error": str(exc),
+                },
+            )
+            console.print(f"[dim]Machine run report written to: {output_path}[/dim]")
+        console.print(f"[red]Error:[/red] {exc}")
+        sys.exit(1)
     
     try:
         result = asyncio.run(agent.run(task))
@@ -292,12 +340,39 @@ def main(
                 scorecard_path.write_text(scorecard + "\n", encoding="utf-8")
                 console.print(f"[dim]Safety scorecard written to: {scorecard_path}[/dim]")
 
+        if json_out:
+            machine_output = _build_machine_output(agent, result)
+            output_path = _write_json_artifact(json_out, machine_output)
+            console.print(f"[dim]Machine run report written to: {output_path}[/dim]")
+
         if not result.get("success", False):
             sys.exit(2)
     except RuntimeError as exc:
+        if json_out:
+            output_path = _write_json_artifact(
+                json_out,
+                {
+                    "schema_version": "1",
+                    "run_status": "error",
+                    "success": False,
+                    "error": str(exc),
+                },
+            )
+            console.print(f"[dim]Machine run report written to: {output_path}[/dim]")
         console.print(f"[red]Error:[/red] {exc}")
         sys.exit(1)
     except KeyboardInterrupt:
+        if json_out:
+            output_path = _write_json_artifact(
+                json_out,
+                {
+                    "schema_version": "1",
+                    "run_status": "interrupted",
+                    "success": False,
+                    "error": "Interrupted by user",
+                },
+            )
+            console.print(f"[dim]Machine run report written to: {output_path}[/dim]")
         console.print("\n[yellow]Interrupted[/yellow]")
         sys.exit(1)
 

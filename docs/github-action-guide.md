@@ -20,10 +20,11 @@ Safe Agent includes a PR risk gate workflow and a reusable local composite actio
 - Runs `safe-agent` in non-interactive mode.
 - Defaults to `--dry-run` with no fail threshold (advisory mode).
 - Set `fail_on_risk` on manual runs when you want strict blocking behavior.
-- Uploads four artifacts:
+- Uploads five artifacts:
   - `safe-agent-summary.md`
   - `safety-scorecard.md`
   - `policy-report.json`
+  - `run-result.json`
   - `safe-agent.log`
 - Propagates `safe-agent` exit status correctly (`pipefail`) so CI gates fail when they should.
 - Seeds fallback summary/scorecard/report files, so failed runs still upload debuggable artifacts.

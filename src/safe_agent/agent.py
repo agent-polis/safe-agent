@@ -380,6 +380,37 @@ class SafeAgent:
             "events": self._governance_events,
         }
 
+    def build_machine_report(self, *, run_success: bool) -> dict[str, Any]:
+        """Build compact machine output suitable for adapters and workers."""
+        outcomes = {event.get("outcome") for event in self._governance_events}
+        if "blocked_non_interactive_requires_approval" in outcomes:
+            run_status = "requires_approval"
+        elif self.risk_policy_failed or self.governance_policy_failed:
+            run_status = "blocked"
+        elif run_success:
+            run_status = "passed"
+        else:
+            run_status = "failed"
+
+        return {
+            "schema_version": "1",
+            "run_status": run_status,
+            "success": run_success,
+            "summary": {
+                "planned_changes": len(self._governance_events),
+                "applied_changes": len(self.changes_made),
+                "rejected_changes": len(self.changes_rejected),
+                "max_risk_level_seen": self.max_risk_level_seen.value if self.max_risk_level_seen else None,
+            },
+            "applied_changes": [
+                {"action": change.get("action"), "path": change.get("path")} for change in self.changes_made
+            ],
+            "rejected_changes": [
+                {"action": change.get("action"), "path": change.get("path")} for change in self.changes_rejected
+            ],
+            "policy_report": self.build_policy_report(),
+        }
+
     def build_safety_scorecard(self) -> str:
         """Build a markdown safety scorecard suitable for release/PR artifacts."""
         import datetime

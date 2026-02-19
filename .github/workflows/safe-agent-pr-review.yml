@@ -79,6 +79,7 @@ jobs:
             ${{ steps.gate.outputs.summary_path }}
             ${{ steps.gate.outputs.safety_scorecard_path }}
             ${{ steps.gate.outputs.policy_report_path }}
+            ${{ steps.gate.outputs.run_result_path }}
             ${{ steps.gate.outputs.log_path }}
           if-no-files-found: warn
 

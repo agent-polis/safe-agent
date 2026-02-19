@@ -46,6 +46,9 @@ outputs:
   policy_report_path:
     description: "Machine-readable policy report path."
     value: ${{ steps.run.outputs.policy_report_path }}
+  run_result_path:
+    description: "Machine-readable run result path."
+    value: ${{ steps.run.outputs.run_result_path }}
   log_path:
     description: "safe-agent run log path."
     value: ${{ steps.run.outputs.log_path }}
@@ -80,6 +83,7 @@ runs:
         summary_path="${{ inputs.artifact-dir }}/safe-agent-summary.md"
         safety_scorecard_path="${{ inputs.artifact-dir }}/safety-scorecard.md"
         policy_report_path="${{ inputs.artifact-dir }}/policy-report.json"
+        run_result_path="${{ inputs.artifact-dir }}/run-result.json"
         log_path="${{ inputs.artifact-dir }}/safe-agent.log"
 
         # Seed fallback artifacts so failed runs still upload actionable context.
@@ -100,6 +104,14 @@ runs:
           "events": []
         }
         EOF
+        cat > "${run_result_path}" <<'EOF'
+        {
+          "schema_version": "1",
+          "run_status": "error",
+          "success": false,
+          "error": "safe-agent exited before writing machine run output."
+        }
+        EOF
 
         cmd=(
           safe-agent
@@ -111,6 +123,8 @@ runs:
           "${safety_scorecard_path}"
           --policy-report
           "${policy_report_path}"
+          --json-out
+          "${run_result_path}"
         )
 
         if [ -n "${{ inputs.fail-on-risk }}" ]; then
@@ -133,6 +147,7 @@ runs:
         echo "summary_path=${summary_path}" >> "$GITHUB_OUTPUT"
         echo "safety_scorecard_path=${safety_scorecard_path}" >> "$GITHUB_OUTPUT"
         echo "policy_report_path=${policy_report_path}" >> "$GITHUB_OUTPUT"
+        echo "run_result_path=${run_result_path}" >> "$GITHUB_OUTPUT"
         echo "log_path=${log_path}" >> "$GITHUB_OUTPUT"
         echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
 

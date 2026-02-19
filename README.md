@@ -281,6 +281,7 @@ We maintain a comprehensive database of AI agent incidents to raise awareness an
 | `--safety-scorecard` | Print a markdown safety scorecard block |
 | `--safety-scorecard-file` | Write markdown safety scorecard to a file |
 | `--policy-report` | Write machine-readable policy/scanner report JSON |
+| `--json-out` | Write machine-readable run result JSON (status + summary + policy report) |
 
 ## MCP Server (For Other AI Agents)
 
@@ -330,6 +331,7 @@ The workflow runs on PRs (non-forks) and manual dispatch, then uploads:
 - `safe-agent-summary.md` (human-readable markdown summary)
 - `safety-scorecard.md` (risk/policy/scanner metrics for trust reviews)
 - `policy-report.json` (machine-readable report with rule IDs/outcomes)
+- `run-result.json` (machine-readable run status for automation adapters)
 - `safe-agent.log` (full run log)
 
 ## For AI Agents

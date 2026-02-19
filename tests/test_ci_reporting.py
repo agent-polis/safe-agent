@@ -87,3 +87,23 @@ def test_safety_scorecard_contains_metrics_and_risk_breakdown(safe_agent: SafeAg
     assert "| Blocked by policy deny | 1 |" in scorecard
     assert "| HIGH | 1 |" in scorecard
     assert "`prompt_injection`" in scorecard
+
+
+def test_machine_report_uses_requires_approval_status(safe_agent: SafeAgent) -> None:
+    safe_agent._record_governance_event(
+        path="foo.py",
+        action="modify",
+        risk_level=RiskLevel.HIGH,
+        policy_decision="require_approval",
+        matched_rule_id=None,
+        scanner_severity="none",
+        scanner_reason_ids=[],
+        outcome="blocked_non_interactive_requires_approval",
+    )
+    safe_agent.governance_policy_failed = True
+
+    report = safe_agent.build_machine_report(run_success=False)
+
+    assert report["schema_version"] == "1"
+    assert report["run_status"] == "requires_approval"
+    assert report["success"] is False

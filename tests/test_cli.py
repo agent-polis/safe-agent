@@ -251,3 +251,70 @@ def test_policy_report_written_even_when_run_fails(monkeypatch) -> None:
         assert report["status"] == "failed"
         assert scorecard_path.exists()
         assert "❌ FAIL" in scorecard_path.read_text(encoding="utf-8")
+
+
+def test_json_out_written_on_success(monkeypatch) -> None:
+    """CLI writes machine-readable output JSON when requested."""
+
+    class DummyAgent:
+        def __init__(self, **kwargs) -> None:
+            pass
+
+        async def run(self, task: str) -> dict:
+            return {"success": True}
+
+        def build_policy_report(self) -> dict:
+            return {"status": "passed", "events": []}
+
+    monkeypatch.setattr("safe_agent.cli.SafeAgent", DummyAgent)
+
+    with runner.isolated_filesystem():
+        json_path = Path("out/run.json")
+        result = runner.invoke(
+            main,
+            [
+                "scan repo",
+                "--non-interactive",
+                "--dry-run",
+                "--json-out",
+                str(json_path),
+            ],
+            env={"ANTHROPIC_API_KEY": "test-key"},
+        )
+        assert result.exit_code == 0
+        assert json_path.exists()
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+        assert payload["schema_version"] == "1"
+        assert payload["run_status"] == "passed"
+        assert payload["success"] is True
+        assert payload["policy_report"]["status"] == "passed"
+
+
+def test_json_out_written_on_runtime_error(monkeypatch) -> None:
+    """CLI writes machine output even when runtime setup fails."""
+
+    class RuntimeErrorAgent:
+        def __init__(self, **kwargs) -> None:
+            raise RuntimeError("governance init failed")
+
+    monkeypatch.setattr("safe_agent.cli.SafeAgent", RuntimeErrorAgent)
+
+    with runner.isolated_filesystem():
+        json_path = Path("out/run.json")
+        result = runner.invoke(
+            main,
+            [
+                "scan repo",
+                "--non-interactive",
+                "--dry-run",
+                "--json-out",
+                str(json_path),
+            ],
+            env={"ANTHROPIC_API_KEY": "test-key"},
+        )
+        assert result.exit_code == 1
+        assert json_path.exists()
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+        assert payload["run_status"] == "error"
+        assert payload["success"] is False
+        assert "governance init failed" in payload["error"]
