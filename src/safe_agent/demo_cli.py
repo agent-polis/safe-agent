@@ -4,8 +4,6 @@ CLI helpers to prepare and record a Safe Agent demo.
 
 from __future__ import annotations
 
-import os
-import sys
 from pathlib import Path
 
 import click

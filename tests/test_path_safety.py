@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from safe_agent.agent import SafeAgent
 
 
@@ -40,4 +38,3 @@ def test_resolve_path_safe_stays_within_working_directory(
     resolved = safe_agent._resolve_path_safe("subdir/file.txt")
     assert resolved is not None
     assert resolved == tmp_path.resolve() / "subdir" / "file.txt"
-

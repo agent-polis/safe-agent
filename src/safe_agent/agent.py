@@ -616,8 +616,8 @@ Rules:
                     if any(p.startswith(".") or p in ["node_modules", "__pycache__", "venv", ".venv"] for p in parts):
                         continue
                     lines.append(str(rel_path))
-        except Exception:
-            pass
+        except OSError as exc:
+            console.print(f"[dim]Skipping file context due to filesystem error: {exc}[/dim]")
         return "\n".join(lines[:100])  # Limit to 100 files
     
     def _show_plan(self, plan: dict[str, Any]) -> None:
