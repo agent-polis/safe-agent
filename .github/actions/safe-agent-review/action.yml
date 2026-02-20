@@ -25,6 +25,10 @@ inputs:
     description: "Optional policy preset (startup|fintech|games)."
     required: false
     default: ""
+  diff-ref:
+    description: "Optional base ref for --diff-gate mode (e.g. origin/main, origin/<base-branch>)."
+    required: false
+    default: ""
   working-directory:
     description: "Working directory to evaluate."
     required: false
@@ -35,7 +39,8 @@ inputs:
     default: ".safe-agent-ci"
   anthropic-api-key:
     description: "Anthropic API key."
-    required: true
+    required: false
+    default: ""
 outputs:
   summary_path:
     description: "Markdown CI summary output path."
@@ -74,8 +79,6 @@ runs:
       name: Run safe-agent risk gate
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      env:
-        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
       run: |
         set +e
         set -o pipefail
@@ -115,7 +118,6 @@ runs:
 
         cmd=(
           safe-agent
-          "${{ inputs.task }}"
           --non-interactive
           --ci-summary-file
           "${summary_path}"
@@ -126,6 +128,16 @@ runs:
           --json-out
           "${run_result_path}"
         )
+
+        if [ -n "${{ inputs.anthropic-api-key }}" ]; then
+          export ANTHROPIC_API_KEY="${{ inputs.anthropic-api-key }}"
+          cmd+=("${{ inputs.task }}")
+        else
+          cmd+=(--diff-gate)
+          if [ -n "${{ inputs.diff-ref }}" ]; then
+            cmd+=(--diff-ref "${{ inputs.diff-ref }}")
+          fi
+        fi
 
         if [ -n "${{ inputs.fail-on-risk }}" ]; then
           cmd+=(--fail-on-risk "${{ inputs.fail-on-risk }}")

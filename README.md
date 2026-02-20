@@ -109,6 +109,16 @@ approval). Combine with `--fail-on-risk` to fail the process if risky changes ar
 safe-agent "scan repository for risky config changes" --dry-run --non-interactive --fail-on-risk high
 ```
 
+Need an API-keyless gate for forks or locked-down CI? Use diff mode:
+
+```bash
+# Analyze current HEAD + working tree diff, no ANTHROPIC_API_KEY needed
+safe-agent --diff-gate --non-interactive --fail-on-risk high
+
+# Analyze diff against a base ref (typical PR gate)
+safe-agent --diff-gate --diff-ref origin/main --non-interactive --fail-on-risk high
+```
+
 For CI artifacts, emit a markdown summary, safety scorecard, and machine-readable report:
 
 ```bash
@@ -270,6 +280,8 @@ We maintain a comprehensive database of AI agent incidents to raise awareness an
 | `--adversarial-suite` | Run adversarial fixture suite from JSON and exit |
 | `--adversarial-json-out` | Write adversarial evaluation JSON report |
 | `--adversarial-markdown-out` | Write adversarial evaluation markdown report |
+| `--diff-gate` | Analyze Git diff directly (no LLM / no API key) |
+| `--diff-ref` | Base Git ref used by `--diff-gate` (for PR comparisons) |
 | `--interactive`, `-i` | Interactive mode |
 | `--file`, `-f` | Read task from file |
 | `--version` | Print installed safe-agent version and exit |
@@ -337,12 +349,15 @@ This repo ships a production workflow and local composite action for PR gating:
 - Workflow: `.github/workflows/safe-agent-pr-review.yml`
 - Action: `.github/actions/safe-agent-review/action.yml`
 
-The workflow runs on PRs (non-forks) and manual dispatch, then uploads:
+The workflow runs on PRs and manual dispatch, then uploads:
 - `safe-agent-summary.md` (human-readable markdown summary)
 - `safety-scorecard.md` (risk/policy/scanner metrics for trust reviews)
 - `policy-report.json` (machine-readable report with rule IDs/outcomes)
 - `run-result.json` (machine-readable run status for automation adapters)
 - `safe-agent.log` (full run log)
+
+If `ANTHROPIC_API_KEY` is unavailable (for example, fork PRs), the workflow automatically falls back to
+`--diff-gate` mode using the PR base ref.
 
 ## For AI Agents
 

@@ -11,7 +11,7 @@ We keep side effects minimal and self-contained under a temporary directory.
 from __future__ import annotations
 
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 from pathlib import Path
 from typing import Iterable
@@ -119,5 +119,5 @@ def run_if_available(cmd: list[str]) -> int:
     """
     if shutil.which(cmd[0]) is None:
         return 0
-    result = subprocess.run(cmd, check=False)
+    result = subprocess.run(cmd, check=False)  # nosec B603
     return result.returncode

@@ -26,6 +26,10 @@ on:
         description: "Optional preset (startup|fintech|games)."
         required: false
         default: ""
+      diff_ref:
+        description: "Optional base ref for --diff-gate (used when API key is unavailable)."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -37,11 +41,12 @@ concurrency:
 jobs:
   risk-gate:
     name: Safe Agent CI Review
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - id: gate
         name: Run Safe Agent review
@@ -52,6 +57,7 @@ jobs:
           dry-run: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'true' }}
           policy-file: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.policy_file || '' }}
           policy-preset: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.policy_preset || '' }}
+          diff-ref: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event_name == 'workflow_dispatch' && github.event.inputs.diff_ref || '' }}
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Attach summary to job output
@@ -82,13 +88,3 @@ jobs:
             ${{ steps.gate.outputs.run_result_path }}
             ${{ steps.gate.outputs.log_path }}
           if-no-files-found: warn
-
-  fork-pr-note:
-    name: Fork PR note
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true
-    runs-on: ubuntu-latest
-    steps:
-      - name: Skip with guidance
-        run: |
-          echo "Skipping Safe Agent gate for fork PR (secrets are unavailable)." >> "$GITHUB_STEP_SUMMARY"
-          echo "Maintainers can run the workflow manually after checkout if needed." >> "$GITHUB_STEP_SUMMARY"

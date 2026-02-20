@@ -20,6 +20,7 @@ Use this checklist before every Safe Agent release.
 
 - [ ] PR risk gate workflow runs successfully:
   - `.github/workflows/safe-agent-pr-review.yml`
+- [ ] Fork/no-secret path works via `--diff-gate` fallback (no API key required).
 - [ ] Workflow artifacts are present:
   - `safe-agent-summary.md`
   - `safety-scorecard.md`

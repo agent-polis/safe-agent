@@ -1,6 +1,7 @@
 """Smoke tests for CLI entry points."""
 
 import json
+import subprocess
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -318,3 +319,77 @@ def test_json_out_written_on_runtime_error(monkeypatch) -> None:
         assert payload["run_status"] == "error"
         assert payload["success"] is False
         assert "governance init failed" in payload["error"]
+
+
+def _git(*args: str) -> None:
+    result = subprocess.run(["git", *args], check=False, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "git command failed")
+
+
+def test_diff_gate_runs_without_api_key() -> None:
+    with runner.isolated_filesystem():
+        _git("init")
+        _git("config", "user.email", "test@example.com")
+        _git("config", "user.name", "Safe Agent Test")
+        Path("README.md").write_text("hello\n", encoding="utf-8")
+        _git("add", "README.md")
+        _git("commit", "-m", "init")
+
+        Path("README.md").write_text("hello world\n", encoding="utf-8")
+
+        result = runner.invoke(main, ["--diff-gate", "--non-interactive"])
+        assert result.exit_code == 0
+        assert "Diff Gate" in result.output
+
+
+def test_diff_gate_fail_on_risk_blocks_and_writes_json() -> None:
+    with runner.isolated_filesystem():
+        _git("init")
+        _git("config", "user.email", "test@example.com")
+        _git("config", "user.name", "Safe Agent Test")
+        Path("README.md").write_text("hello\n", encoding="utf-8")
+        _git("add", "README.md")
+        _git("commit", "-m", "init")
+
+        Path("README.md").write_text("hello world\n", encoding="utf-8")
+        out_path = Path("out/run.json")
+        result = runner.invoke(
+            main,
+            [
+                "--diff-gate",
+                "--non-interactive",
+                "--fail-on-risk",
+                "low",
+                "--json-out",
+                str(out_path),
+            ],
+        )
+        assert result.exit_code == 2
+        assert out_path.exists()
+        payload = json.loads(out_path.read_text(encoding="utf-8"))
+        assert payload["run_status"] == "blocked"
+        assert payload["policy_report"]["risk_policy_failed"] is True
+
+
+def test_diff_gate_with_diff_ref() -> None:
+    with runner.isolated_filesystem():
+        _git("init")
+        _git("config", "user.email", "test@example.com")
+        _git("config", "user.name", "Safe Agent Test")
+        Path("README.md").write_text("hello\n", encoding="utf-8")
+        _git("add", "README.md")
+        _git("commit", "-m", "init")
+
+        Path("README.md").write_text("hello world\n", encoding="utf-8")
+        _git("add", "README.md")
+        _git("commit", "-m", "second")
+
+        result = runner.invoke(main, ["--diff-gate", "--diff-ref", "HEAD~1", "--non-interactive"])
+        assert result.exit_code == 0
+
+
+def test_diff_gate_rejects_unsafe_diff_ref() -> None:
+    result = runner.invoke(main, ["--diff-gate", "--diff-ref", "--bad-ref"])
+    assert result.exit_code == 1
+    assert "diff_ref cannot start with '-'" in result.output

@@ -12,6 +12,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
@@ -30,7 +31,7 @@ def _write_json_artifact(path: str, payload: dict) -> Path:
     return output_path
 
 
-def _build_machine_output(agent: SafeAgent, result: dict) -> dict:
+def _build_machine_output(agent: Any, result: dict) -> dict:
     if hasattr(agent, "build_machine_report"):
         report = agent.build_machine_report(run_success=bool(result.get("success", False)))  # type: ignore[attr-defined]
         if isinstance(report, dict):
@@ -104,6 +105,17 @@ def _build_machine_output(agent: SafeAgent, result: dict) -> dict:
     is_flag=True,
     help="Print full impact preview output during adversarial runs (default: quiet).",
 )
+@click.option(
+    "--diff-gate",
+    is_flag=True,
+    help="Analyze current git diff without calling an LLM (no API key required).",
+)
+@click.option(
+    "--diff-ref",
+    type=str,
+    default=None,
+    help="Base git ref for --diff-gate (e.g. origin/main, HEAD~1).",
+)
 @click.option("--model", default="claude-sonnet-4-20250514", help="Claude model to use")
 @click.option("--audit-export", type=click.Path(), help="Export audit trail to JSON file")
 @click.option("--compliance-mode", is_flag=True, help="Enable strict compliance mode (disables auto-approve)")
@@ -156,6 +168,8 @@ def main(
     adversarial_json_out: str | None,
     adversarial_markdown_out: str | None,
     adversarial_verbose: bool,
+    diff_gate: bool,
+    diff_ref: str | None,
     model: str,
     audit_export: str | None,
     compliance_mode: bool,
@@ -228,45 +242,6 @@ def main(
             sys.exit(3)
         sys.exit(0)
 
-    # Check for API key
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        console.print("[red]Error: ANTHROPIC_API_KEY environment variable not set[/red]")
-        console.print("\nGet your API key at: https://console.anthropic.com/")
-        console.print("Then run: export ANTHROPIC_API_KEY=your-key-here")
-        sys.exit(1)
-    
-    # Get task
-    if file:
-        with open(file) as f:
-            task = f.read().strip()
-    elif interactive:
-        console.print(Panel(
-            "[bold]Safe Agent[/bold] - Interactive Mode\n\n"
-            "Type your coding task, then press Enter twice to submit.\n"
-            "Type 'quit' to exit.",
-            title="🛡️ Safe Agent",
-        ))
-        lines = []
-        while True:
-            try:
-                line = input()
-                if line.lower() == "quit":
-                    sys.exit(0)
-                if line == "" and lines and lines[-1] == "":
-                    break
-                lines.append(line)
-            except EOFError:
-                break
-        task = "\n".join(lines).strip()
-    
-    if not task:
-        console.print("[red]Error: No task provided[/red]")
-        console.print("\nUsage: safe-agent \"your task here\"")
-        sys.exit(1)
-    
-    # Show task
-    console.print(Panel(task, title="📋 Task", border_style="blue"))
-
     inferred_non_interactive = non_interactive or bool(os.environ.get("CI")) or (
         not sys.stdin.isatty() or not sys.stdout.isatty()
     )
@@ -276,19 +251,85 @@ def main(
 
         fail_on_risk_level = RiskLevel(fail_on_risk.lower())
     
-    # Create agent and run
-    try:
-        agent = SafeAgent(
-            model=model,
-            auto_approve_low_risk=auto_approve_low,
-            dry_run=dry_run,
-            non_interactive=inferred_non_interactive,
-            fail_on_risk=fail_on_risk_level,
-            audit_export_path=audit_export,
-            compliance_mode=compliance_mode,
-            policy_path=policy,
-            policy_preset=policy_preset,
+    runner: Any
+    task_for_runner: str | None = None
+
+    if diff_gate:
+        if task or file or interactive:
+            console.print("[yellow]Ignoring task input in --diff-gate mode.[/yellow]")
+        console.print(
+            Panel(
+                f"Analyzing git diff in: {os.getcwd()}\n"
+                f"Base ref: {diff_ref or 'HEAD + working tree'}",
+                title="🧪 Diff Gate",
+                border_style="cyan",
+            )
         )
+    else:
+        # Check for API key
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            console.print("[red]Error: ANTHROPIC_API_KEY environment variable not set[/red]")
+            console.print("\nGet your API key at: https://console.anthropic.com/")
+            console.print("Then run: export ANTHROPIC_API_KEY=your-key-here")
+            sys.exit(1)
+
+        # Get task
+        if file:
+            with open(file) as f:
+                task = f.read().strip()
+        elif interactive:
+            console.print(Panel(
+                "[bold]Safe Agent[/bold] - Interactive Mode\n\n"
+                "Type your coding task, then press Enter twice to submit.\n"
+                "Type 'quit' to exit.",
+                title="🛡️ Safe Agent",
+            ))
+            lines = []
+            while True:
+                try:
+                    line = input()
+                    if line.lower() == "quit":
+                        sys.exit(0)
+                    if line == "" and lines and lines[-1] == "":
+                        break
+                    lines.append(line)
+                except EOFError:
+                    break
+            task = "\n".join(lines).strip()
+
+        if not task:
+            console.print("[red]Error: No task provided[/red]")
+            console.print("\nUsage: safe-agent \"your task here\"")
+            sys.exit(1)
+
+        task_for_runner = task
+        console.print(Panel(task_for_runner, title="📋 Task", border_style="blue"))
+
+    # Create runner and execute
+    try:
+        if diff_gate:
+            from safe_agent.diff_gate import DiffGateRunner
+
+            runner = DiffGateRunner(
+                working_directory=os.getcwd(),
+                diff_ref=diff_ref,
+                fail_on_risk=fail_on_risk_level,
+                policy_path=policy,
+                policy_preset=policy_preset,
+                compliance_mode=compliance_mode,
+            )
+        else:
+            runner = SafeAgent(
+                model=model,
+                auto_approve_low_risk=auto_approve_low,
+                dry_run=dry_run,
+                non_interactive=inferred_non_interactive,
+                fail_on_risk=fail_on_risk_level,
+                audit_export_path=audit_export,
+                compliance_mode=compliance_mode,
+                policy_path=policy,
+                policy_preset=policy_preset,
+            )
     except ValueError as exc:
         console.print(f"[red]Error:[/red] {exc}")
         if policy_preset:
@@ -310,9 +351,14 @@ def main(
         sys.exit(1)
     
     try:
-        result = asyncio.run(agent.run(task))
+        if diff_gate:
+            result = asyncio.run(runner.run())
+        else:
+            if task_for_runner is None:
+                raise RuntimeError("Task missing in task mode.")
+            result = asyncio.run(runner.run(task_for_runner))
         if ci_summary or ci_summary_file:
-            summary = agent.build_ci_summary()
+            summary = runner.build_ci_summary()
             if ci_summary:
                 console.print()
                 console.print(summary)
@@ -323,14 +369,14 @@ def main(
                 console.print(f"[dim]CI summary written to: {summary_path}[/dim]")
 
         if policy_report:
-            report = agent.build_policy_report()
+            report = runner.build_policy_report()
             report_path = Path(policy_report)
             report_path.parent.mkdir(parents=True, exist_ok=True)
             report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             console.print(f"[dim]Policy report written to: {report_path}[/dim]")
 
         if safety_scorecard or safety_scorecard_file:
-            scorecard = agent.build_safety_scorecard()
+            scorecard = runner.build_safety_scorecard()
             if safety_scorecard:
                 console.print()
                 console.print(scorecard)
@@ -341,7 +387,7 @@ def main(
                 console.print(f"[dim]Safety scorecard written to: {scorecard_path}[/dim]")
 
         if json_out:
-            machine_output = _build_machine_output(agent, result)
+            machine_output = _build_machine_output(runner, result)
             output_path = _write_json_artifact(json_out, machine_output)
             console.print(f"[dim]Machine run report written to: {output_path}[/dim]")
 

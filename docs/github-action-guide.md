@@ -10,7 +10,7 @@ Safe Agent includes a PR risk gate workflow and a reusable local composite actio
 
 ## Setup
 
-1. Add repository secret `ANTHROPIC_API_KEY`.
+1. Add repository secret `ANTHROPIC_API_KEY` (recommended, but optional).
 2. Ensure `safe-agent-cli` is available in your repo (this action installs from source with `pip install .`).
 3. Keep a policy file in-repo if you want custom rules (optional).
 
@@ -18,6 +18,8 @@ Safe Agent includes a PR risk gate workflow and a reusable local composite actio
 
 - Triggered on `pull_request` and `workflow_dispatch`.
 - Runs `safe-agent` in non-interactive mode.
+- Uses full task mode when `ANTHROPIC_API_KEY` is present.
+- Falls back to API-keyless `--diff-gate` mode when the key is unavailable (for example, fork PRs).
 - Defaults to `--dry-run` with no fail threshold (advisory mode).
 - Set `fail_on_risk` on manual runs when you want strict blocking behavior.
 - Uploads five artifacts:
@@ -28,8 +30,6 @@ Safe Agent includes a PR risk gate workflow and a reusable local composite actio
   - `safe-agent.log`
 - Propagates `safe-agent` exit status correctly (`pipefail`) so CI gates fail when they should.
 - Seeds fallback summary/scorecard/report files, so failed runs still upload debuggable artifacts.
-
-Fork PRs are skipped because GitHub does not expose secrets to untrusted forks.
 
 ## Adversarial fixture workflow
 
