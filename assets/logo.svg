@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Safe Agent logo">
+  <rect width="256" height="256" rx="32" fill="#0f172a"/>
+  <path d="M128 36 48 70v58c0 54 37 88 80 100 43-12 80-46 80-100V70l-80-34Z" fill="#22c55e"/>
+  <path d="M128 58 66 84v44c0 41 26 67 62 78 36-11 62-37 62-78V84l-62-26Z" fill="#0f172a"/>
+  <path d="m104 130 18 18 34-34" fill="none" stroke="#22c55e" stroke-linecap="round" stroke-linejoin="round" stroke-width="14"/>
+</svg>

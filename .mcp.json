@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "safe-agent": {
+      "command": "safe-agent-mcp"
+    }
+  }
+}

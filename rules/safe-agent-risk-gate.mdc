@@ -1,0 +1,15 @@
+---
+description: Require Safe Agent previews and policy artifacts before risky file changes.
+globs:
+  - "**/*"
+alwaysApply: false
+---
+
+- For risky or security-sensitive edits, run `safe-agent --dry-run --non-interactive` first.
+- Persist machine-readable artifacts when possible:
+  - `--ci-summary-file .safe-agent-ci/summary.md`
+  - `--safety-scorecard-file .safe-agent-ci/safety-scorecard.md`
+  - `--policy-report .safe-agent-ci/policy-report.json`
+  - `--json-out .safe-agent-ci/run-result.json`
+- Treat denied or approval-required actions as blockers until a human explicitly confirms.
+- Never relax policy settings silently; explain tradeoffs and get approval for policy changes.

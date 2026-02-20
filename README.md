@@ -314,6 +314,16 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 | `preview_coding_task` | Preview changes without executing | 🟢 Read-only |
 | `get_agent_status` | Check agent status and capabilities | 🟢 Read-only |
 
+## Cursor Plugin (Beta)
+
+This repo now includes a Cursor plugin layout:
+
+- `.cursor-plugin/plugin.json`
+- `.mcp.json`
+- `rules/`, `skills/`, `commands/`, `agents/`
+
+The plugin is aimed at PR safety workflows (risk preview + policy artifacts) and can be submitted to the Cursor Marketplace.
+
 ## Moltbook Integration
 
 Safe Agent is available as a [Moltbook](https://moltbook.com) skill for AI agent networks.

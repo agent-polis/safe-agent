@@ -1,0 +1,19 @@
+{
+  "name": "safe-agent-guardrails",
+  "version": "0.1.0",
+  "description": "Safe coding guardrails for Cursor agents with risk previews and policy reports.",
+  "author": {
+    "name": "Agent Polis Contributors",
+    "email": "maintainers@agent-polis.dev"
+  },
+  "keywords": [
+    "cursor",
+    "safety",
+    "ai-agent",
+    "code-review",
+    "guardrails"
+  ],
+  "logo": "assets/logo.svg",
+  "repository": "https://github.com/agent-polis/safe-agent",
+  "license": "MIT"
+}
