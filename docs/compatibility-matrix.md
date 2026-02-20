@@ -12,6 +12,7 @@ This document tracks tested compatibility between:
 | 0.3.x | >=0.2.1 | Supported | Baseline support for preview + risk analysis APIs. |
 | 0.4.x | >=0.2.2 | Supported | Stage 1 governance (policy + scanner surfacing). |
 | 0.4.3 | >=0.2.2 | Supported | Stage 3 trust signals (adversarial eval + scorecard) plus hardened CI gates. |
+| 0.4.4 | >=0.2.2 | Supported | API-keyless `--diff-gate` plus fork PR fallback for CI risk gate workflows. |
 
 ## Stage Feature Gates
 
@@ -37,7 +38,7 @@ Latest smoke record: [docs/stage2-smoke-2026-02-18.md](stage2-smoke-2026-02-18.m
 
 ## Known Caveats
 
-- `safe-agent-cli` currently requires `ANTHROPIC_API_KEY` even in `--dry-run`, because planning still calls Anthropic.
+- Task mode requires `ANTHROPIC_API_KEY` (planning still calls Anthropic), but `--diff-gate` and `--adversarial-suite` do not.
 - CI runs should use `--non-interactive` and `--fail-on-risk` for deterministic behavior.
 - PR risk gate defaults to advisory mode unless `fail_on_risk` is explicitly set.
 
